@@ -10,7 +10,6 @@ import (
 // SpecValidationErrorEntry describes an entry in the spec validation error.
 type SpecValidationErrorEntry struct {
 	Path   string
-	Target any
 	Issues []string
 }
 
@@ -84,7 +83,6 @@ func (i *issuesCollector) maybeToError() error {
 	for target, issues := range i.issuesByTarget {
 		entries = append(entries, &SpecValidationErrorEntry{
 			Path:   target.getDisplayPath(),
-			Target: target,
 			Issues: issues,
 		})
 	}
