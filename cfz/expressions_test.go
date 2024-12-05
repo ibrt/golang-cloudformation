@@ -169,7 +169,7 @@ func (*ExpressionsSuite) TestNullExpression(g *WithT) {
 	}
 }
 
-func (*ExpressionsSuite) TestFNGetAtt(g *WithT) {
+func (*ExpressionsSuite) TestGetAttExpression(g *WithT) {
 	g.Expect(func() { cfz.GetAtt[string](cfz.V(""), cfz.V("")).Expression("") }).ToNot(Panic())
 
 	{
@@ -192,7 +192,7 @@ func (*ExpressionsSuite) TestFNGetAtt(g *WithT) {
 	}
 }
 
-func (*ExpressionsSuite) TestFNJoin(g *WithT) {
+func (*ExpressionsSuite) TestJoinExpression(g *WithT) {
 	g.Expect(func() { cfz.Join(":", cfz.SV("A")).Expression("") }).ToNot(Panic())
 
 	{
@@ -221,7 +221,7 @@ func (*ExpressionsSuite) TestFNJoin(g *WithT) {
 	}
 }
 
-func (*ExpressionsSuite) TestFNSub(g *WithT) {
+func (*ExpressionsSuite) TestSubExpression(g *WithT) {
 	g.Expect(func() { cfz.Sub("s").Expression("") }).ToNot(Panic())
 
 	{
@@ -244,7 +244,7 @@ func (*ExpressionsSuite) TestFNSub(g *WithT) {
 	}
 }
 
-func (*ExpressionsSuite) TestRef(g *WithT) {
+func (*ExpressionsSuite) TestRefExpression(g *WithT) {
 	g.Expect(func() { cfz.Ref(cfz.V("s")).Expression("") }).ToNot(Panic())
 
 	{
@@ -264,5 +264,117 @@ func (*ExpressionsSuite) TestRef(g *WithT) {
 		buf, err := json.Marshal(v)
 		g.Expect(err).To(Succeed())
 		g.Expect(buf).To(Equal([]byte(`{"v":{"Ref":"s"}}`)))
+	}
+}
+
+func (*ExpressionsSuite) TestSlice(g *WithT) {
+	g.Expect(func() { cfz.S[string]().ExpressionSlice("") }).ToNot(Panic())
+
+	{
+		v := cfz.Slice[string](nil)
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`null`)))
+	}
+	{
+		v := cfz.S[string]()
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`[]`)))
+	}
+	{
+		v := cfz.S(cfz.V("1"), cfz.Ref(cfz.V("2")))
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`["1",{"Ref":"2"}]`)))
+	}
+	{
+		v := testHolder[cfz.ExpressionSlice[string]]{V: cfz.S(cfz.V("1"), cfz.V("2"))}
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`{"v":["1","2"]}`)))
+	}
+
+	{
+		v := cfz.SV("1", "2")
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`["1","2"]`)))
+	}
+}
+
+func (*ExpressionsSuite) TestGetAttExpressionSlice(g *WithT) {
+	g.Expect(func() { cfz.GetAttSlice[string](cfz.V(""), cfz.V("")).ExpressionSlice("") }).ToNot(Panic())
+
+	{
+		v := cfz.GetAttSlice[string](cfz.V("A"), cfz.V("B"))
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := v.MarshalJSON()
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`{"Fn::GetAtt":["A","B"]}`)))
+	}
+	{
+		v := cfz.GetAttSlice[string](cfz.V("A"), cfz.N[string]())
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := v.MarshalJSON()
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`{"Fn::GetAtt":["A",null]}`)))
+	}
+	{
+		v := testHolder[cfz.ExpressionSlice[string]]{V: cfz.GetAttSlice[string](cfz.V("A"), cfz.V("B"))}
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`{"v":{"Fn::GetAtt":["A","B"]}}`)))
+	}
+}
+
+func (*ExpressionsSuite) TestMap(g *WithT) {
+	g.Expect(func() { cfz.M[string]().ExpressionMap("") }).ToNot(Panic())
+
+	{
+		v := cfz.Map[string](nil)
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`null`)))
+	}
+	{
+		v := cfz.M[string]()
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`{}`)))
+	}
+	{
+		v := cfz.M(map[string]cfz.Expression[string]{
+			"k1": cfz.V("v1"),
+			"k2": cfz.Ref(cfz.V("v2")),
+		})
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`{"k1":"v1","k2":{"Ref":"v2"}}`)))
+	}
+	{
+		v := testHolder[cfz.ExpressionMap[string]]{
+			V: cfz.M(map[string]cfz.Expression[string]{
+				"k1": cfz.V("v1"),
+				"k2": cfz.V("v2"),
+			})}
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`{"v":{"k1":"v1","k2":"v2"}}`)))
+	}
+
+	{
+		v := cfz.MV(map[string]string{"k1": "v1", "k2": "v2"})
+		g.Expect(v.GetShallowCopy()).To(Equal(v))
+		buf, err := json.Marshal(v)
+		g.Expect(err).To(Succeed())
+		g.Expect(buf).To(Equal([]byte(`{"k1":"v1","k2":"v2"}`)))
 	}
 }
