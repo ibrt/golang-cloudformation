@@ -70,6 +70,12 @@ type {{ .GoName }} struct {
 
         // CF_DependsOn indicates which resources must be created before this one.
         CF_DependsOn []cfz.ResourcePartialLogicalName `json:"-"`
+
+        // CF_DeletionPolicy indicates the deletion behavior of CloudFormation for this resource.
+        CF_DeletionPolicy cfz.ResourceDeletionPolicy `json:"-"`
+
+        // CF_UpdateReplacePolicy indicates the update replace behavior of CloudFormation for this resource.
+        CF_UpdateReplacePolicy cfz.ResourceUpdateReplacePolicy `json:"-"`
     {{ end }}
 
     {{- range $k, $v := .Properties }}
@@ -118,6 +124,8 @@ func (v *{{ .GoName }}) GetType() string {
         return json.Marshal(struct {
             Type string `json:"Type"`
             DependsOn []string `json:"DependsOn,omitempty"`
+            DeletionPolicy cfz.ResourceDeletionPolicy `json:"DeletionPolicy,omitempty"`
+            UpdateReplacePolicy cfz.ResourceUpdateReplacePolicy `json:"UpdateReplacePolicy,omitempty"`
             Properties *CF_Properties `json:"Properties,omitempty"`
         }{
             Type: v.GetType(),
