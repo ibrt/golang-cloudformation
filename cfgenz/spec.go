@@ -2,7 +2,9 @@ package cfgenz
 
 import (
 	_ "embed" // embed
+	"fmt"
 	"path"
+	"path/filepath"
 	ttpl "text/template"
 
 	"github.com/ibrt/golang-utils/errorz"
@@ -18,10 +20,19 @@ var (
 
 // GeneratorSpecOptions describes some options for the generator spec.
 type GeneratorSpecOptions struct {
-	GoSupportPackage      string
-	GoOutputPackage       string
-	TypeTemplate          *ttpl.Template
-	TypeTemplateGoImports []string
+	GoSupportPackage              string
+	GoOutputPackage               string
+	TypeTemplate                  *ttpl.Template
+	TypeTemplateRequiredGoImports []string
+}
+
+func (o *GeneratorSpecOptions) getGoSupportBasePackage() string {
+	return filepath.Base(o.GoSupportPackage)
+}
+
+func (o *GeneratorSpecOptions) getGoSupportType(ic *importsCollector, goType string) string {
+	ic.collectImports(o.GoSupportPackage)
+	return fmt.Sprintf("%v.%v", o.getGoSupportBasePackage(), goType)
 }
 
 // NewDefaultGeneratorSpecOptions initializes a new set of default generator spec options.
@@ -32,8 +43,9 @@ func NewDefaultGeneratorSpecOptions() *GeneratorSpecOptions {
 		GoSupportPackage: path.Join(basePackage, "cfz"),
 		GoOutputPackage:  path.Join(basePackage, "cfz", "gen"),
 		TypeTemplate:     ttpl.Must(ttpl.New("").Parse(assetsTypeTPL)),
-		TypeTemplateGoImports: []string{
-			path.Join(basePackage, "cfz"),
+		TypeTemplateRequiredGoImports: []string{
+			"encoding/json",               // for json marshaling
+			path.Join(basePackage, "cfz"), // for support items
 		},
 	}
 }
@@ -83,5 +95,30 @@ func (gs *GeneratorSpec) makeMustLookupType(gt *GeneratorType, sc cfspecz.SpecCo
 			sc.GetDisplayPath(), unqualifiedStructuredTypeName)
 
 		return t
+	}
+}
+
+func (gs *GeneratorSpec) getPrimitiveGoType(ic *importsCollector, primitiveType string) string {
+	switch primitiveType {
+	case "Boolean":
+		return "bool"
+	case "Double":
+		return "float64"
+	case "Integer":
+		// TODO(ibrt): Switch to int?
+		return "int32"
+	case "Json":
+		// TODO(ibrt): Dedicated type?
+		ic.collectImports("encoding/json")
+		return "json.RawMessage"
+	case "Long":
+		return "int64"
+	case "String":
+		return "string"
+	case "Timestamp":
+		// TODO(ibrt): Dedicated type?
+		return "string"
+	default:
+		panic(errorz.Errorf("unknown primitive type: '%v'", primitiveType))
 	}
 }

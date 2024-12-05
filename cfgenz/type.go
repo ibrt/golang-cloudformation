@@ -46,8 +46,8 @@ func (t *GeneratorType) GetRelatedStructuredTypeName(unqualifiedStructuredTypeNa
 	return t.t.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)
 }
 
-// GoType returns the Go type for this type.
-func (t *GeneratorType) GoType() string {
+// GoName returns the Go name for this type.
+func (t *GeneratorType) GoName() string {
 	structName := strings.ReplaceAll(t.t.Name, "::", "_")
 	return strings.ReplaceAll(structName, ".", "_")
 }
@@ -61,7 +61,28 @@ func (t *GeneratorType) GoPackageName() string {
 
 // GoFileName returns the Go file name for this type.
 func (t *GeneratorType) GoFileName() string {
-	return strings.ToLower(t.GoType()) + ".go"
+	return strings.ToLower(t.GoName()) + ".go"
+}
+
+// GoImports returns the Go imports for this type.
+func (t *GeneratorType) GoImports() []string {
+	ic := newImportsCollector()
+	ic.collectImports(t.spec.o.TypeTemplateRequiredGoImports...)
+
+	for _, ga := range t.Attributes {
+		ga.collectImports(ic)
+	}
+
+	for _, gp := range t.Properties {
+		gp.collectImports(ic)
+	}
+
+	return ic.toSlice()
+}
+
+// GoSupportBasePackage returns the base package for the support library.
+func (t *GeneratorType) GoSupportBasePackage() string {
+	return t.spec.o.getGoSupportBasePackage()
 }
 
 // DocumentationURL returns the documentation URL for this type.
