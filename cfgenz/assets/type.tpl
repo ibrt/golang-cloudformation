@@ -79,7 +79,7 @@ type {{ .GoName }} struct {
     {{ end }}
 
     {{- range $k, $v := .Properties }}
-        // {{ $v.Name }} is a resource property.
+        // {{ $v.Name }} is a property.
         // See: {{ $v.DocumentationURL }}
         {{ $v.GoName }} {{ $v.GoType }} `json:"{{ $v.Name }},omitempty"`
     {{ end }}
