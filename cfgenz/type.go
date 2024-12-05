@@ -1,8 +1,11 @@
 package cfgenz
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/ibrt/golang-utils/errorz"
 	"github.com/ibrt/golang-utils/memz"
 	"github.com/ibrt/golang-utils/tplz"
 
@@ -101,7 +104,16 @@ func (gt *GeneratorType) Name() string {
 	return gt.t.Name
 }
 
-// Render the type template.
-func (gt *GeneratorType) render() ([]byte, error) {
-	return tplz.ExecuteGo(gt.spec.o.TypeTemplate, gt)
+func (gt *GeneratorType) generate(outDirPath string) error {
+	buf, err := tplz.ExecuteGo(gt.spec.o.TypeTemplate, gt)
+	if err != nil {
+		return errorz.Wrap(err)
+	}
+
+	outDirPath = filepath.Join(outDirPath, gt.GoPackageName())
+	if err := os.MkdirAll(outDirPath, 0777); err != nil {
+		return errorz.Wrap(err)
+	}
+
+	return errorz.MaybeWrap(os.WriteFile(filepath.Join(outDirPath, gt.GoFileName()), buf, 0666))
 }

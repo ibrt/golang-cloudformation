@@ -3,6 +3,7 @@ package cfgenz
 import (
 	_ "embed" // embed
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	ttpl "text/template"
@@ -87,15 +88,19 @@ func (gs *GeneratorSpec) ResourceSpecificationVersion() string {
 }
 
 // Generate applies all the templates and writes the results out to disk.
-func (gs *GeneratorSpec) Generate(_ string) error {
+func (gs *GeneratorSpec) Generate(outDirPath string) error {
+	if err := os.RemoveAll(outDirPath); err != nil {
+		return errorz.Wrap(err)
+	}
+
 	for _, gt := range gs.StructuredTypes {
-		if _, err := gt.render(); err != nil {
+		if err := gt.generate(outDirPath); err != nil {
 			return errorz.Wrap(err)
 		}
 	}
 
 	for _, gt := range gs.TopLevelResourceTypes {
-		if _, err := gt.render(); err != nil {
+		if err := gt.generate(outDirPath); err != nil {
 			return errorz.Wrap(err)
 		}
 	}
