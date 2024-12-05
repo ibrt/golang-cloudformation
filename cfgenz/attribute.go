@@ -32,7 +32,7 @@ func (ga *GeneratorAttribute) GoName() string {
 	return string(s)
 }
 
-// GoType returns the Go  type for this attribute.
+// GoType returns the Go type for this attribute.
 func (ga *GeneratorAttribute) GoType() string {
 	return ga.goType(nil)
 }
@@ -45,6 +45,11 @@ func (ga *GeneratorAttribute) GoGenericType() string {
 // SupportGetAttFunctionName returns the GetAtt* support function to use for this attribute.
 func (ga *GeneratorAttribute) SupportGetAttFunctionName() string {
 	return memz.Ternary(ga.a.Type == "List", "GetAttSlice", "GetAtt")
+}
+
+// Name returns the CloudFormation name for this attribute.
+func (ga *GeneratorAttribute) Name() string {
+	return ga.a.Name
 }
 
 func (ga *GeneratorAttribute) goType(ic *importsCollector) string {

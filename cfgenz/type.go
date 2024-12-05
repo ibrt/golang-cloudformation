@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/ibrt/golang-utils/memz"
+	"github.com/ibrt/golang-utils/tplz"
 
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
@@ -36,44 +37,44 @@ func newGeneratorType(gs *GeneratorSpec, t *cfspecz.Type) *GeneratorType {
 
 // GetRelatedTopLevelResourceTypeName returns the top-level resource type name related to this type, that is, Name if
 // IsTopLevelResourceType = true, or the portion of Name before the first "." otherwise.
-func (t *GeneratorType) GetRelatedTopLevelResourceTypeName() string {
-	return t.t.GetRelatedTopLevelResourceTypeName()
+func (gt *GeneratorType) GetRelatedTopLevelResourceTypeName() string {
+	return gt.t.GetRelatedTopLevelResourceTypeName()
 }
 
 // GetRelatedStructuredTypeName converts the value of a Type or ItemType field of a property or attribute in this type
 // to its fully qualified structured type name.
-func (t *GeneratorType) GetRelatedStructuredTypeName(unqualifiedStructuredTypeName string) string {
-	return t.t.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)
+func (gt *GeneratorType) GetRelatedStructuredTypeName(unqualifiedStructuredTypeName string) string {
+	return gt.t.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)
 }
 
 // GoName returns the Go name for this type.
-func (t *GeneratorType) GoName() string {
-	structName := strings.ReplaceAll(t.t.Name, "::", "_")
+func (gt *GeneratorType) GoName() string {
+	structName := strings.ReplaceAll(gt.t.Name, "::", "_")
 	return strings.ReplaceAll(structName, ".", "_")
 }
 
 // GoPackageName returns the Go package name for this type.
-func (t *GeneratorType) GoPackageName() string {
+func (gt *GeneratorType) GoPackageName() string {
 	return strings.ToLower(strings.Join(
-		strings.Split(t.GetRelatedTopLevelResourceTypeName(), "::")[0:2],
+		strings.Split(gt.GetRelatedTopLevelResourceTypeName(), "::")[0:2],
 		"_"))
 }
 
 // GoFileName returns the Go file name for this type.
-func (t *GeneratorType) GoFileName() string {
-	return strings.ToLower(t.GoName()) + ".go"
+func (gt *GeneratorType) GoFileName() string {
+	return strings.ToLower(gt.GoName()) + ".go"
 }
 
 // GoImports returns the Go imports for this type.
-func (t *GeneratorType) GoImports() []string {
+func (gt *GeneratorType) GoImports() []string {
 	ic := newImportsCollector()
-	ic.collectImports(t.spec.o.TypeTemplateRequiredGoImports...)
+	ic.collectImports(gt.spec.o.TypeTemplateRequiredGoImports...)
 
-	for _, ga := range t.Attributes {
+	for _, ga := range gt.Attributes {
 		ga.collectImports(ic)
 	}
 
-	for _, gp := range t.Properties {
+	for _, gp := range gt.Properties {
 		gp.collectImports(ic)
 	}
 
@@ -81,21 +82,26 @@ func (t *GeneratorType) GoImports() []string {
 }
 
 // GoSupportBasePackage returns the base package for the support library.
-func (t *GeneratorType) GoSupportBasePackage() string {
-	return t.spec.o.getGoSupportBasePackage()
+func (gt *GeneratorType) GoSupportBasePackage() string {
+	return gt.spec.o.getGoSupportBasePackage()
 }
 
 // DocumentationURL returns the documentation URL for this type.
-func (t *GeneratorType) DocumentationURL() string {
-	return t.t.Documentation
+func (gt *GeneratorType) DocumentationURL() string {
+	return gt.t.Documentation
 }
 
 // IsTopLevelResourceType returns true if this is a top-level resource type, false if it is a structured type.
-func (t *GeneratorType) IsTopLevelResourceType() bool {
-	return t.t.IsTopLevelResourceType
+func (gt *GeneratorType) IsTopLevelResourceType() bool {
+	return gt.t.IsTopLevelResourceType
 }
 
 // Name returns the CloudFormation name for this type.
-func (t *GeneratorType) Name() string {
-	return t.t.Name
+func (gt *GeneratorType) Name() string {
+	return gt.t.Name
+}
+
+// Render the type template.
+func (gt *GeneratorType) render() ([]byte, error) {
+	return tplz.ExecuteGo(gt.spec.o.TypeTemplate, gt)
 }

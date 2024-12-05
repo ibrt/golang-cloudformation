@@ -30,6 +30,26 @@ func (gp *GeneratorProperty) GoName() string {
 	return string(s)
 }
 
+// GoType returns the Go type for this property.
+func (gp *GeneratorProperty) GoType() string {
+	return gp.goType(nil)
+}
+
+// GoGenericType returns the Go generic type for this property.
+func (gp *GeneratorProperty) GoGenericType() string {
+	return gp.goGenericType(nil)
+}
+
+// DocumentationURL returns the documentation URL for this property.
+func (gp *GeneratorProperty) DocumentationURL() string {
+	return gp.p.Documentation
+}
+
+// Name returns the CloudFormation name for this property.
+func (gp *GeneratorProperty) Name() string {
+	return gp.p.Name
+}
+
 func (gp *GeneratorProperty) goType(ic *importsCollector) string {
 	if gp.p.Type == "List" {
 		return gp.parent.spec.o.getGoSupportType(ic,

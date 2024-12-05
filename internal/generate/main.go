@@ -9,6 +9,7 @@ import (
 	"github.com/ibrt/golang-utils/filez"
 	"github.com/ibrt/golang-utils/ioz"
 
+	"github.com/ibrt/golang-cloudformation/cfgenz"
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
 
@@ -35,6 +36,9 @@ func main() {
 	filez.MustWriteFile(specFilePath, 0777, 0666, ioz.MustReadAllAndClose(resp.Body))
 
 	fmt.Println("Parsing and validating CloudFormation spec...")
-	_, err = cfspecz.NewSpecFromBuffer(filez.MustReadFile(specFilePath), cfspecz.NewDefaultSpecPatchManager())
+	s, err := cfspecz.NewSpecFromBuffer(filez.MustReadFile(specFilePath), cfspecz.NewDefaultSpecPatchManager())
 	errorz.MaybeMustWrap(err)
+
+	gs := cfgenz.NewGeneratorSpec(cfgenz.NewDefaultGeneratorSpecOptions(), s)
+	errorz.MaybeMustWrap(gs.Generate(""))
 }

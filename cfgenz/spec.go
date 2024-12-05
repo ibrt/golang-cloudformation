@@ -86,6 +86,23 @@ func (gs *GeneratorSpec) ResourceSpecificationVersion() string {
 	return gs.s.ResourceSpecificationVersion
 }
 
+// Generate applies all the templates and writes the results out to disk.
+func (gs *GeneratorSpec) Generate(_ string) error {
+	for _, gt := range gs.StructuredTypes {
+		if _, err := gt.render(); err != nil {
+			return errorz.Wrap(err)
+		}
+	}
+
+	for _, gt := range gs.TopLevelResourceTypes {
+		if _, err := gt.render(); err != nil {
+			return errorz.Wrap(err)
+		}
+	}
+
+	return nil
+}
+
 func (gs *GeneratorSpec) makeMustLookupType(gt *GeneratorType, sc cfspecz.SpecContext) func(string) *GeneratorType {
 	return func(unqualifiedStructuredTypeName string) *GeneratorType {
 		t := gs.StructuredTypes[gt.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
