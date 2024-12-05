@@ -40,5 +40,5 @@ func main() {
 	errorz.MaybeMustWrap(err)
 
 	gs := cfgenz.NewGeneratorSpec(cfgenz.NewDefaultGeneratorSpecOptions(), s)
-	errorz.MaybeMustWrap(gs.Generate(""))
+	errorz.MaybeMustWrap(gs.Generate(filez.MustAbs(filepath.Join("cfz", "gen"))))
 }

@@ -21,10 +21,10 @@ var (
 
 // GeneratorSpecOptions describes some options for the generator spec.
 type GeneratorSpecOptions struct {
-	GoSupportPackage              string
-	GoOutputPackage               string
-	TypeTemplate                  *ttpl.Template
-	TypeTemplateRequiredGoImports []string
+	GoSupportPackage                 string
+	GoOutputPackage                  string
+	TypeTemplate                     *ttpl.Template
+	TypeTemplateGetImplicitGoImports func(t *GeneratorType) []string
 }
 
 func (o *GeneratorSpecOptions) getGoSupportBasePackage() string {
@@ -38,15 +38,18 @@ func (o *GeneratorSpecOptions) getGoSupportType(ic *importsCollector, goType str
 
 // NewDefaultGeneratorSpecOptions initializes a new set of default generator spec options.
 func NewDefaultGeneratorSpecOptions() *GeneratorSpecOptions {
-	const basePackage = "github.com/ibrt/golang-cloudformation"
+	const goBasePackage = "github.com/ibrt/golang-cloudformation"
+	goSupportPackage := path.Join(goBasePackage, "cfz")
 
 	return &GeneratorSpecOptions{
-		GoSupportPackage: path.Join(basePackage, "cfz"),
-		GoOutputPackage:  path.Join(basePackage, "cfz", "gen"),
+		GoSupportPackage: goSupportPackage,
+		GoOutputPackage:  path.Join(goBasePackage, "cfz", "gen"),
 		TypeTemplate:     ttpl.Must(ttpl.New("").Parse(assetsTypeTPL)),
-		TypeTemplateRequiredGoImports: []string{
-			"encoding/json",               // for json marshaling
-			path.Join(basePackage, "cfz"), // for support items
+		TypeTemplateGetImplicitGoImports: func(gt *GeneratorType) []string {
+			return newImportsCollector().
+				maybeCollectImports(gt.IsTopLevelResourceType(), goSupportPackage).
+				maybeCollectImports(gt.IsTopLevelResourceType(), "encoding/json").
+				toSlice()
 		},
 	}
 }

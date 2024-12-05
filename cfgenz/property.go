@@ -53,7 +53,7 @@ func (gp *GeneratorProperty) Name() string {
 func (gp *GeneratorProperty) goType(ic *importsCollector) string {
 	if gp.p.Type == "List" {
 		return gp.parent.spec.o.getGoSupportType(ic,
-			fmt.Sprintf("ExpressionList[%v]", gp.goGenericType(ic)))
+			fmt.Sprintf("ExpressionSlice[%v]", gp.goGenericType(ic)))
 	}
 
 	if gp.p.Type == "Map" {

@@ -55,7 +55,7 @@ func (ga *GeneratorAttribute) Name() string {
 func (ga *GeneratorAttribute) goType(ic *importsCollector) string {
 	if ga.a.Type == "List" {
 		return ga.parent.spec.o.getGoSupportType(ic,
-			fmt.Sprintf("ExpressionList[%v]", ga.goGenericType(ic)))
+			fmt.Sprintf("ExpressionSlice[%v]", ga.goGenericType(ic)))
 	}
 
 	return ga.parent.spec.o.getGoSupportType(ic,

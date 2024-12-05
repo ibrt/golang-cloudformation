@@ -71,7 +71,7 @@ func (gt *GeneratorType) GoFileName() string {
 // GoImports returns the Go imports for this type.
 func (gt *GeneratorType) GoImports() []string {
 	ic := newImportsCollector()
-	ic.collectImports(gt.spec.o.TypeTemplateRequiredGoImports...)
+	ic.collectImports(gt.spec.o.TypeTemplateGetImplicitGoImports(gt)...)
 
 	for _, ga := range gt.Attributes {
 		ga.collectImports(ic)
