@@ -10,17 +10,3 @@ type Tag struct {
 	// Value is a property.
 	Value Expression[string] `json:"Value,omitempty"`
 }
-
-// STV is a shorthand for generating an ExpressionSlice[Tag] from a map of string key and values.
-func STV(tags map[string]string) ExpressionSlice[Tag] {
-	s := make(Slice[Tag], 0, len(tags))
-
-	for k, v := range tags {
-		s = append(s, V(Tag{
-			Key:   V(k),
-			Value: V(v),
-		}))
-	}
-
-	return s
-}

@@ -216,6 +216,20 @@ func SV[T any](items ...T) Slice[T] {
 		})...)
 }
 
+// STV returns a Slice[Tag] with the given elements.
+func STV(tagsMap map[string]string) Slice[Tag] {
+	tagsSlice := make(Slice[Tag], 0, len(tagsMap))
+
+	for k, v := range tagsMap {
+		tagsSlice = append(tagsSlice, V(Tag{
+			Key:   V(k),
+			Value: V(v),
+		}))
+	}
+
+	return tagsSlice
+}
+
 // ExpressionSlice implements the ExpressionSlice[T] interface.
 func (Slice[T]) ExpressionSlice(_ T) {
 	// intentionally empty
