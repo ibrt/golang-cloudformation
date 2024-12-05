@@ -15,23 +15,24 @@ type Property struct {
 	Type              string
 	UpdateType        string
 
-	Parent          *Type                                            `json:"-"`
 	Name            string                                           `json:"-"`
 	MaybeLookupType func(unqualifiedStructuredTypeName string) *Type `json:"-"`
+	displayPath     string
 }
 
 // GetDisplayPath implements the SpecContext interface.
 func (p *Property) GetDisplayPath() string {
-	return fmt.Sprintf("%v/property[%v]", p.Parent.GetDisplayPath(), p.Name)
+	return p.displayPath
 }
 
 func (p *Property) preProcess(spec *Spec, parent *Type, name string) {
-	p.Parent = parent
 	p.Name = name
 
 	p.MaybeLookupType = func(unqualifiedStructuredTypeName string) *Type {
 		return spec.PropertyTypes[parent.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
 	}
+
+	p.displayPath = fmt.Sprintf("%v/property[%v]", parent.GetDisplayPath(), p.Name)
 }
 
 func (p *Property) collectIssues(ic *SpecIssueCollector) {

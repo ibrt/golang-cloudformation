@@ -27,17 +27,17 @@ func NewSpecIssueCollector() *SpecIssueCollector {
 }
 
 // CollectIssue collects an issue.
-func (c *SpecIssueCollector) CollectIssue(e SpecContext, format string, a ...any) *SpecIssueCollector {
-	issues := c.issuesByElement[e]
+func (c *SpecIssueCollector) CollectIssue(sc SpecContext, format string, a ...any) *SpecIssueCollector {
+	issues := c.issuesByElement[sc]
 	issues = append(issues, fmt.Sprintf(format, a...))
-	c.issuesByElement[e] = issues
+	c.issuesByElement[sc] = issues
 	return c
 }
 
 // MaybeCollectIssue collects an issue if "cond" is true.
-func (c *SpecIssueCollector) MaybeCollectIssue(e SpecContext, cond bool, format string, a ...any) *SpecIssueCollector {
+func (c *SpecIssueCollector) MaybeCollectIssue(sc SpecContext, cond bool, format string, a ...any) *SpecIssueCollector {
 	if cond {
-		return c.CollectIssue(e, format, a...)
+		return c.CollectIssue(sc, format, a...)
 	}
 	return c
 }

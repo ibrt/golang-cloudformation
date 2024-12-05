@@ -11,23 +11,25 @@ type Attribute struct {
 	PrimitiveType     string
 	Type              string
 
-	Parent          *Type                                            `json:"-"`
 	Name            string                                           `json:"-"`
 	MaybeLookupType func(unqualifiedStructuredTypeName string) *Type `json:"-"`
+
+	displayPath string
 }
 
 // GetDisplayPath implements the SpecContext interface.
 func (a *Attribute) GetDisplayPath() string {
-	return fmt.Sprintf("%v/attribute[%v]", a.Parent.GetDisplayPath(), a.Name)
+	return a.displayPath
 }
 
 func (a *Attribute) preProcess(spec *Spec, parent *Type, name string) {
-	a.Parent = parent
 	a.Name = name
 
 	a.MaybeLookupType = func(unqualifiedStructuredTypeName string) *Type {
 		return spec.PropertyTypes[parent.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
 	}
+
+	a.displayPath = fmt.Sprintf("%v/attribute[%v]", parent.GetDisplayPath(), a.Name)
 }
 
 func (a *Attribute) collectIssues(ic *SpecIssueCollector) {
