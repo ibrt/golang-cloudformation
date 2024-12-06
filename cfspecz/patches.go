@@ -1,8 +1,15 @@
 package cfspecz
 
 import (
+	"fmt"
+
+	"github.com/Jeffail/gabs/v2"
+	"github.com/ibrt/golang-utils/errorz"
 	"github.com/ibrt/golang-utils/jsonz"
 )
+
+// RawPatch describes a patch applicable to the raw spec (i.e. before parsing into structs).
+type RawPatch func(rawSpec *gabs.Container) error
 
 // SpecPatch describes a patch applicable to a spec.
 type SpecPatch func(ic *SpecIssueCollector, s *Spec)
@@ -12,6 +19,7 @@ type TypePatch func(ic *SpecIssueCollector, t *Type)
 
 // SpecPatchManager manages a set of patches for a spec.
 type SpecPatchManager struct {
+	rawPatches  []RawPatch
 	specPatches []SpecPatch
 	typePatches map[string][]TypePatch
 }
@@ -19,6 +27,7 @@ type SpecPatchManager struct {
 // NewSpecPatchManager initializes a new spec patch manager.
 func NewSpecPatchManager() *SpecPatchManager {
 	return &SpecPatchManager{
+		rawPatches:  make([]RawPatch, 0),
 		specPatches: make([]SpecPatch, 0),
 		typePatches: make(map[string][]TypePatch),
 	}
@@ -27,6 +36,16 @@ func NewSpecPatchManager() *SpecPatchManager {
 // NewDefaultSpecPatchManager initializes a new spec patch manager and configures it with default, known patchers.
 func NewDefaultSpecPatchManager() *SpecPatchManager {
 	return NewSpecPatchManager().
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::DLM::LifecyclePolicy.ExcludeVolumeTypesList").
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::LakeFormation::DataLakeSettings.CreateTableDefaultPermissions").
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::LakeFormation::DataLakeSettings.ExternalDataFilteringAllowList").
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets").
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::Glue::SecurityConfiguration.S3Encryptions").
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::DLM::LifecyclePolicy.ExcludeTags").
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::CodeBuild::Project.FilterGroup").
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::LakeFormation::DataLakeSettings.CreateDatabaseDefaultPermissions").
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::CloudWatch::AnomalyDetector.MetricDataQueries").
+		RegisterRawPatchDeletePath("PropertyTypes", "AWS::LakeFormation::DataLakeSettings.Admins").
 		RegisterSpecPatch(
 			func(ic *SpecIssueCollector, s *Spec) {
 				if _, ok := s.PropertyTypes["Tag"]; ok {
@@ -66,6 +85,23 @@ func NewDefaultSpecPatchManager() *SpecPatchManager {
 			func(a *Attribute) bool { return a.Type == "Map" && a.PrimitiveItemType == "String" })
 }
 
+// RegisterRawPatch registers a raw patch.
+func (m *SpecPatchManager) RegisterRawPatch(patch RawPatch) *SpecPatchManager {
+	m.rawPatches = append(m.rawPatches, patch)
+	return m
+}
+
+// RegisterRawPatchDeletePath registers a "delete path" raw patch.
+func (m *SpecPatchManager) RegisterRawPatchDeletePath(hierarchy ...string) *SpecPatchManager {
+	return m.RegisterRawPatch(func(rawSpec *gabs.Container) error {
+		if !rawSpec.Exists(hierarchy...) {
+			return errorz.Errorf("outated patch: missing path: %v", jsonz.MustMarshalString(hierarchy))
+		}
+
+		return errorz.MaybeWrap(rawSpec.Delete(hierarchy...))
+	})
+}
+
 // RegisterSpecPatch registers a spec patch.
 func (m *SpecPatchManager) RegisterSpecPatch(patch SpecPatch) *SpecPatchManager {
 	m.specPatches = append(m.specPatches, patch)
@@ -100,6 +136,16 @@ func (m *SpecPatchManager) RegisterTypePatchDeleteAttribute(typeName, attributeN
 
 		delete(t.Attributes, attributeName)
 	})
+}
+
+func (m *SpecPatchManager) applyRawPatches(raw *gabs.Container) error {
+	for i, patch := range m.rawPatches {
+		if err := patch(raw); err != nil {
+			return errorz.Wrap(err, fmt.Errorf("raw patch #%v", i))
+		}
+	}
+
+	return nil
 }
 
 func (m *SpecPatchManager) applySpecPatches(ic *SpecIssueCollector, s *Spec) {
