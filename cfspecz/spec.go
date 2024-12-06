@@ -9,7 +9,7 @@ const (
 	specDisplayPath = "spec"
 )
 
-// SpecContext describes an place in the spec (i.e. spec, type, property, or attribute).
+// SpecContext describes a place in the spec (i.e. spec, type, property, or attribute).
 type SpecContext interface {
 	GetDisplayPath() string
 }
