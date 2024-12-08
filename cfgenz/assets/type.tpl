@@ -229,6 +229,27 @@ func ({{ if .IsTopLevelResourceType }}*{{ end }}{{ .GoName }}) GetType() string 
         }
     {{ end }}
 
+    // GetConventionalOutputRef returns a conventionally configured output for the Ref of this resource.
+    func (t *{{ .GoName }}) GetConventionalOutputRef(isExported bool) *{{ .GoSupportBasePackage }}.Output {
+        o := {{ .GoSupportBasePackage }}.NewOutput(t.GetResourceLogicalName()+"Ref").SetValue(t.Ref())
+        if isExported {
+            o.SetConventionalExportName()
+        }
+        return o
+    }
+
+    {{ range $k, $v := .Attributes }}
+        // GetConventionalOutputAtt__{{ $v.GoName }} returns a conventionally configured output for an attribute of this resource.
+        // Attribute: {{ $v.Name }}
+        func (t *{{ $.GoName }}) GetConventionalOutputAtt__{{ $v.GoName }}(isExported bool) *{{ $.GoSupportBasePackage }}.Output {
+            o := {{ $.GoSupportBasePackage }}.NewOutput(t.GetResourceLogicalName()+"Att{{ $v.NameForLogicalNames }}").SetValue(t.GetAtt__{{ $v.GoName }}())
+            if isExported {
+                o.SetConventionalExportName()
+            }
+            return o
+        }
+    {{ end }}
+
     // MarshalJSON implements the {{ .GoSupportBasePackage }}.Resource interface.
     func (t *{{ .GoName }}) MarshalJSON() ([]byte, error) {
         if t == nil {
