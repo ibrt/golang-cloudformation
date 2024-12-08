@@ -38,8 +38,43 @@ func NewDefaultPatchManager() *PatchManager {
 				ItemType:          "",
 			},
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets",
+		}).
+		// References invalid, deleted type "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets", fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::DLM::LifecyclePolicy",
+			PropertyName: "CrossRegionCopyTargets",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "CrossRegionCopyTargets",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+		}).
+		// References invalid, deleted type "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets", fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::DLM::LifecyclePolicy.PolicyDetails",
+			PropertyName: "CrossRegionCopyTargets",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "CrossRegionCopyTargets",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
 		}).
 		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
@@ -62,8 +97,26 @@ func NewDefaultPatchManager() *PatchManager {
 				ItemType:          "",
 			},
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::DLM::LifecyclePolicy.ExcludeVolumeTypesList",
+		}).
+		// References invalid, deleted type "AWS::DLM::LifecyclePolicy.ExcludeVolumeTypesList", fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::DLM::LifecyclePolicy.Exclusions",
+			PropertyName: "ExcludeVolumeTypes",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "ExcludeVolumeTypesList",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
 		}).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::DLM::LifecyclePolicy.VolumeTypeValues",
@@ -71,8 +124,26 @@ func NewDefaultPatchManager() *PatchManager {
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::Glue::Table.MetadataOperation",
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::Glue::SecurityConfiguration.S3Encryptions",
+		}).
+		// References invalid, deleted type "AWS::Glue::SecurityConfiguration.S3Encryptions", fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::Glue::SecurityConfiguration.EncryptionConfiguration",
+			PropertyName: "S3Encryptions",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "S3Encryptions",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
 		}).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::LakeFormation::DataLakeSettings.Admins",
