@@ -70,17 +70,17 @@ var (
 // See: {{ .DocumentationURL }}
 type {{ .GoName }} struct {
     {{- if .IsTopLevelResourceType -}}
-        // CF_LogicalName is the CloudFormation logical name for this resource in the template.
-        CF_LogicalName string `json:"-"`
+        // __LogicalName is the CloudFormation logical name for this resource in the template.
+        __LogicalName string `json:"-"`
 
-        // CF_DependsOn indicates which resources must be created before this one.
-        CF_DependsOn []{{ .GoSupportBasePackage }}.ResourcePartialLogicalName `json:"-"`
+        // __DependsOn indicates which resources must be created before this one.
+        __DependsOn []{{ .GoSupportBasePackage }}.ResourcePartialLogicalName `json:"-"`
 
-        // CF_DeletionPolicy indicates the deletion behavior of CloudFormation for this resource.
-        CF_DeletionPolicy {{ .GoSupportBasePackage }}.ResourceDeletionPolicy `json:"-"`
+        // __DeletionPolicy indicates the deletion behavior of CloudFormation for this resource.
+        __DeletionPolicy {{ .GoSupportBasePackage }}.ResourceDeletionPolicy `json:"-"`
 
-        // CF_UpdateReplacePolicy indicates the update replace behavior of CloudFormation for this resource.
-        CF_UpdateReplacePolicy {{ .GoSupportBasePackage }}.ResourceUpdateReplacePolicy `json:"-"`
+        // __UpdateReplacePolicy indicates the update replace behavior of CloudFormation for this resource.
+        __UpdateReplacePolicy {{ .GoSupportBasePackage }}.ResourceUpdateReplacePolicy `json:"-"`
     {{ end }}
 
     {{- range $k, $v := .Properties }}
@@ -94,7 +94,7 @@ type {{ .GoName }} struct {
     // New__{{ .GoName }} initializes a new *{{ .GoName }}.
     func New__{{ .GoName }}(logicalName string) *{{ .GoName }} {
         return &{{ .GoName }}{
-            CF_LogicalName: logicalName,
+            __LogicalName: logicalName,
         }
     }
 {{ else }}
@@ -108,7 +108,7 @@ type {{ .GoName }} struct {
     // GetLogicalName returns the CloudFormation logical name for this resource in the template.
     // It implements the {{ .GoSupportBasePackage }}.Resource and {{ .GoSupportBasePackage }}.ResourcePartialLogicalName interface.
     func (t *{{ .GoName }}) GetResourceLogicalName() string {
-        return t.CF_LogicalName
+        return t.__LogicalName
     }
 {{ end }}
 
@@ -120,43 +120,43 @@ func ({{ if .IsTopLevelResourceType }}*{{ end }}{{ .GoName }}) GetType() string 
 
 {{range $k, $v := .Properties }}
     // Set__{{ $v.GoName }} updates property "{{ $v.Name }}".
-    func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) Set__{{ $v.GoName }}(n {{ $v.GoType }}) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
-        t.{{ $v.GoName }} = n
+    func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) Set__{{ $v.GoName }}(v {{ $v.GoType }}) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
+        t.{{ $v.GoName }} = v
         return t
     }
 
     {{ if eq $v.GoUnqualifiedOuterType "Expression" }}
         // SetV__{{ $v.GoName }} updates property "{{ $v.Name }}".
-        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetV__{{ $v.GoName }}(n {{ $v.GoGenericType }}) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
-            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.V(n)
+        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetV__{{ $v.GoName }}(v {{ $v.GoGenericType }}) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
+            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.V(v)
             return t
         }
     {{ end }}
 
     {{ if eq $v.GoUnqualifiedOuterType "ExpressionSlice" }}
         // SetS__{{ $v.GoName }} updates property "{{ $v.Name }}".
-        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetS__{{ $v.GoName }}(n ...{{ $.GoSupportBasePackage}}.Expression[{{ $v.GoGenericType }}]) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
-            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.S(n...)
+        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetS__{{ $v.GoName }}(v ...{{ $.GoSupportBasePackage}}.Expression[{{ $v.GoGenericType }}]) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
+            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.S(v...)
             return t
         }
 
         // SetSV__{{ $v.GoName }} updates property "{{ $v.Name }}".
-        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetSV__{{ $v.GoName }}(n ...{{ $v.GoGenericType }}) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
-            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.SV(n...)
+        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetSV__{{ $v.GoName }}(v ...{{ $v.GoGenericType }}) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
+            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.SV(v...)
             return t
         }
     {{ end }}
 
     {{ if eq $v.GoUnqualifiedOuterType "ExpressionMap" }}
         // SetM__{{ $v.GoName }} updates property "{{ $v.Name }}".
-        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetM__{{ $v.GoName }}(n ...map[string]{{ $.GoSupportBasePackage}}.Expression[{{ $v.GoGenericType }}]) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
-            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.M(n...)
+        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetM__{{ $v.GoName }}(v ...map[string]{{ $.GoSupportBasePackage}}.Expression[{{ $v.GoGenericType }}]) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
+            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.M(v...)
             return t
         }
 
         // SetMV__{{ $v.GoName }} updates property "{{ $v.Name }}".
-        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetMV__{{ $v.GoName }}(n ...map[string]{{ $v.GoGenericType }}) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
-            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.MV(n...)
+        func (t {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }}) SetMV__{{ $v.GoName }}(v ...map[string]{{ $v.GoGenericType }}) {{ if $.IsTopLevelResourceType }}*{{ end }}{{ $.GoName }} {
+            t.{{ $v.GoName }} = {{ $.GoSupportBasePackage }}.MV(v...)
             return t
         }
     {{ end }}
@@ -182,25 +182,25 @@ func ({{ if .IsTopLevelResourceType }}*{{ end }}{{ .GoName }}) GetType() string 
             return []byte(`null`), nil
         }
 
-        type CF_Properties {{ .GoName }}
+        type Properties {{ .GoName }}
 
         return json.Marshal(struct {
             Type string `json:"Type"`
             DependsOn []string `json:"DependsOn,omitempty"`
             DeletionPolicy {{ .GoSupportBasePackage }}.ResourceDeletionPolicy `json:"DeletionPolicy,omitempty"`
             UpdateReplacePolicy {{ .GoSupportBasePackage }}.ResourceUpdateReplacePolicy `json:"UpdateReplacePolicy,omitempty"`
-            Properties *CF_Properties `json:"Properties,omitempty"`
+            Properties *Properties `json:"Properties,omitempty"`
         }{
             Type: t.GetType(),
             DependsOn: t.getDependsOn(),
-            Properties: (*CF_Properties)(t),
+            Properties: (*Properties)(t),
         })
     }
 
     func (t *{{ .GoName }}) getDependsOn() []string {
-        dependsOn := make([]string, 0, len(t.CF_DependsOn))
+        dependsOn := make([]string, 0, len(t.__DependsOn))
 
-        for _, r := range t.CF_DependsOn {
+        for _, r := range t.__DependsOn {
             dependsOn = append(dependsOn, r.GetResourceLogicalName())
         }
 

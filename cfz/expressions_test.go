@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/ibrt/golang-cloudformation/cfz"
-	. "github.com/ibrt/golang-cloudformation/cfz/gen/aws_accessanalyzer"
 )
 
 type ExpressionsSuite struct {
@@ -26,19 +25,6 @@ type testOmitEmptyHolder[T any] struct {
 
 type testHolder[T any] struct {
 	V T `json:"v"`
-}
-
-func (*ExpressionsSuite) TestSomething(g *WithT) {
-	New__AWS_AccessAnalyzer_Analyzer("ASd").
-		SetV__AnalyzerConfiguration(
-			New__AWS_AccessAnalyzer_Analyzer_AnalyzerConfiguration().
-				Set__UnusedAccessConfiguration(nil),
-		).
-		SetV__AnalyzerConfiguration(AWS_AccessAnalyzer_Analyzer_AnalyzerConfiguration{
-			UnusedAccessConfiguration: nil,
-		})
-
-	New__AWS_AccessAnalyzer_Analyzer_AnalysisRule().SetS__Exclusions()
 }
 
 func (*ExpressionsSuite) TestValueExpression(g *WithT) {
