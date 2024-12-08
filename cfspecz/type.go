@@ -14,6 +14,7 @@ type Type struct {
 	Properties    map[string]*Property
 
 	IsTopLevelResourceType bool   `json:"-"`
+	IsReferenced           bool   `json:"-"`
 	Name                   string `json:"-"`
 }
 

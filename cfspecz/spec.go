@@ -109,5 +109,9 @@ func (s *Spec) collectIssues() error {
 		propertyType.collectIssues(ic)
 	}
 
+	for _, propertyType := range s.PropertyTypes {
+		ic.MaybeCollectIssue(propertyType, !propertyType.IsReferenced, "unreferenced structured type")
+	}
+
 	return ic.MaybeToError()
 }

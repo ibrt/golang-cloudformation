@@ -12,6 +12,7 @@ func NewDefaultPatchManager() *PatchManager {
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::CloudFormation::CustomResource",
 		}).
+		// Invalid type (unreferenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::CloudWatch::AnomalyDetector.MetricDataQueries",
 		}).
@@ -143,6 +144,7 @@ func NewDefaultPatchManager() *PatchManager {
 				ItemType:          "",
 			},
 		}).
+		// Invalid type (unreferenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::DLM::LifecyclePolicy.VolumeTypeValues",
 		}).
