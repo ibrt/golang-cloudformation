@@ -1,15 +1,18 @@
 package cfspecz
 
 import (
+	"bytes"
+	"encoding/json"
+
+	"github.com/Jeffail/gabs/v2"
 	"github.com/ibrt/golang-utils/errorz"
-	"github.com/ibrt/golang-utils/jsonz"
 )
 
 const (
 	specDisplayPath = "spec"
 )
 
-// SpecContext describes an place in the spec (i.e. spec, type, property, or attribute).
+// SpecContext describes a place in the spec (i.e. spec, type, property, or attribute).
 type SpecContext interface {
 	GetDisplayPath() string
 }
@@ -23,9 +26,27 @@ type Spec struct {
 
 // NewSpecFromBuffer parses, patches (using the given spec patch manager), and validates a CloudFormation spec from the
 // given buffer (i.e. "CloudFormationResourceSpecification.json" file).
-func NewSpecFromBuffer(buf []byte, pm *SpecPatchManager) (*Spec, error) {
-	spec, err := jsonz.Unmarshal[*Spec](buf)
+func NewSpecFromBuffer(buf []byte, pm *PatchManager) (*Spec, error) {
+	d := json.NewDecoder(bytes.NewReader(buf))
+	d.DisallowUnknownFields()
+	d.UseNumber()
+
+	rawSpec, err := gabs.ParseJSONDecoder(d)
 	if err != nil {
+		return nil, errorz.Wrap(err)
+	}
+
+	if err := pm.applyRawPatches(rawSpec); err != nil {
+		return nil, errorz.Wrap(err)
+	}
+
+	d = json.NewDecoder(bytes.NewReader(rawSpec.EncodeJSON()))
+	d.DisallowUnknownFields()
+	d.UseNumber()
+
+	var spec *Spec
+
+	if err := d.Decode(&spec); err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
@@ -57,7 +78,7 @@ func (s *Spec) preProcess() {
 	}
 }
 
-func (s *Spec) applyPatches(pm *SpecPatchManager) error {
+func (s *Spec) applyPatches(pm *PatchManager) error {
 	ic := NewSpecIssueCollector()
 	pm.applySpecPatches(ic, s)
 
@@ -86,6 +107,10 @@ func (s *Spec) collectIssues() error {
 
 	for _, propertyType := range s.PropertyTypes {
 		propertyType.collectIssues(ic)
+	}
+
+	for _, propertyType := range s.PropertyTypes {
+		ic.MaybeCollectIssue(propertyType, !propertyType.IsReferenced, "unreferenced structured type")
 	}
 
 	return ic.MaybeToError()

@@ -26,7 +26,12 @@ func (a *Attribute) preProcess(spec *Spec, parent *Type, name string) {
 	a.Name = name
 
 	a.MaybeLookupType = func(unqualifiedStructuredTypeName string) *Type {
-		return spec.PropertyTypes[parent.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
+		if t := spec.PropertyTypes[parent.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]; t != nil {
+			t.IsReferenced = true
+			return t
+		}
+
+		return nil
 	}
 
 	a.displayPath = fmt.Sprintf("%v/attribute[%v]", parent.GetDisplayPath(), a.Name)

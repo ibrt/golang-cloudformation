@@ -1,115 +1,490 @@
 package cfspecz
 
 import (
-	"github.com/ibrt/golang-utils/jsonz"
+	"github.com/ibrt/golang-utils/memz"
 )
 
-// SpecPatch describes a patch applicable to a spec.
-type SpecPatch func(ic *SpecIssueCollector, s *Spec)
-
-// TypePatch describes a patch applicable to a type.
-type TypePatch func(ic *SpecIssueCollector, t *Type)
-
-// SpecPatchManager manages a set of patches for a spec.
-type SpecPatchManager struct {
-	specPatches []SpecPatch
-	typePatches map[string][]TypePatch
-}
-
-// NewSpecPatchManager initializes a new spec patch manager.
-func NewSpecPatchManager() *SpecPatchManager {
-	return &SpecPatchManager{
-		specPatches: make([]SpecPatch, 0),
-		typePatches: make(map[string][]TypePatch),
-	}
-}
-
-// NewDefaultSpecPatchManager initializes a new spec patch manager and configures it with default, known patchers.
-func NewDefaultSpecPatchManager() *SpecPatchManager {
-	return NewSpecPatchManager().
-		RegisterSpecPatch(
-			func(ic *SpecIssueCollector, s *Spec) {
-				if _, ok := s.PropertyTypes["Tag"]; ok {
-					delete(s.PropertyTypes, "Tag")
-					return
-				}
-
-				ic.CollectIssue(s, "outdated patch: missing property type: 'Tag'")
-			}).
-		RegisterTypePatchDeleteAttribute(
-			"AWS::CleanRooms::IdNamespaceAssociation",
-			"InputReferenceProperties.IdMappingWorkflowsSupported",
-			func(a *Attribute) bool { return a.Type == "List" && a.PrimitiveItemType == "Json" }).
-		RegisterTypePatchDeleteAttribute(
-			"AWS::CloudFormation::WaitCondition",
-			"Data",
-			func(a *Attribute) bool { return a.PrimitiveType == "Json" }).
-		RegisterTypePatchDeleteAttribute(
-			"AWS::IoTTwinMaker::Scene",
-			"GeneratedSceneMetadata",
-			func(a *Attribute) bool { return a.Type == "Map" && a.PrimitiveItemType == "String" }).
-		RegisterTypePatchDeleteAttribute(
-			"AWS::MediaLive::SignalMap",
-			"MediaResourceMap",
-			func(a *Attribute) bool { return a.Type == "Map" && a.ItemType == "MediaResource" }).
-		RegisterTypePatchDeleteAttribute(
-			"AWS::MediaLive::SignalMap",
-			"FailedMediaResourceMap",
-			func(a *Attribute) bool { return a.Type == "Map" && a.ItemType == "MediaResource" }).
-		RegisterTypePatchDeleteAttribute(
-			"AWS::OpenSearchService::Domain",
-			"DomainEndpoints",
-			func(a *Attribute) bool { return a.Type == "Map" && a.PrimitiveItemType == "String" }).
-		RegisterTypePatchDeleteAttribute(
-			"AWS::ServiceCatalog::CloudFormationProvisionedProduct",
-			"Outputs",
-			func(a *Attribute) bool { return a.Type == "Map" && a.PrimitiveItemType == "String" })
-}
-
-// RegisterSpecPatch registers a spec patch.
-func (m *SpecPatchManager) RegisterSpecPatch(patch SpecPatch) *SpecPatchManager {
-	m.specPatches = append(m.specPatches, patch)
-	return m
-}
-
-// RegisterTypePatch registers a type patch.
-func (m *SpecPatchManager) RegisterTypePatch(typeName string, patch TypePatch) *SpecPatchManager {
-	typePatchesForType := m.typePatches[typeName]
-	typePatchesForType = append(typePatchesForType, patch)
-	m.typePatches[typeName] = typePatchesForType
-	return m
-}
-
-// RegisterTypePatchDeleteAttribute registers a "delete attribute" type patch.
-func (m *SpecPatchManager) RegisterTypePatchDeleteAttribute(typeName, attributeName string, cond func(a *Attribute) bool) *SpecPatchManager {
-	return m.RegisterTypePatch(typeName, func(ic *SpecIssueCollector, t *Type) {
-		a, ok := t.Attributes[attributeName]
-		if !ok {
-			ic.CollectIssue(t, "outdated patch: missing attribute: '%v'", attributeName)
-			return
-		}
-
-		if !cond(a) {
-			ic.CollectIssue(t,
-				"outdated patch: attribute '%v' does not match condition (%v)",
-				attributeName,
-				jsonz.MustMarshalPrettyString(a))
-
-			return
-		}
-
-		delete(t.Attributes, attributeName)
-	})
-}
-
-func (m *SpecPatchManager) applySpecPatches(ic *SpecIssueCollector, s *Spec) {
-	for _, patch := range m.specPatches {
-		patch(ic, s)
-	}
-}
-
-func (m *SpecPatchManager) applyTypePatches(ic *SpecIssueCollector, t *Type) {
-	for _, patch := range m.typePatches[t.Name] {
-		patch(ic, t)
-	}
+// NewDefaultPatchManager initializes a new patch manager and configures it with default, known patchers.
+func NewDefaultPatchManager() *PatchManager {
+	return NewPatchManager().
+		// Special treatment for "CustomResource".
+		// Clients can handle it by implementing the cfz.Resource interface.
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::CloudFormation::CustomResource",
+		}).
+		// Invalid type (unreferenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::CloudWatch::AnomalyDetector.MetricDataQueries",
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::CloudWatch::InsightRule.Tags",
+		}).
+		// References invalid, deleted type "AWS::CloudWatch::InsightRule.Tags",
+		// fallback to List(Tag) (as documented)..
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::CloudWatch::InsightRule",
+			PropertyName: "Tags",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "Tags",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "Tag",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::CodeBuild::Project.FilterGroup",
+		}).
+		// References invalid, deleted type "AWS::CodeBuild::Project.FilterGroup",
+		// fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::CodeBuild::Project.ProjectTriggers",
+			PropertyName: "FilterGroups",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "FilterGroup",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets",
+		}).
+		// References invalid, deleted type "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets",
+		// fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::DLM::LifecyclePolicy",
+			PropertyName: "CrossRegionCopyTargets",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "CrossRegionCopyTargets",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+		}).
+		// References invalid, deleted type "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets",
+		// fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::DLM::LifecyclePolicy.PolicyDetails",
+			PropertyName: "CrossRegionCopyTargets",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "CrossRegionCopyTargets",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::DLM::LifecyclePolicy.ExcludeTags",
+		}).
+		// References invalid, deleted type "AWS::DLM::LifecyclePolicy.ExcludeTags",
+		// fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::DLM::LifecyclePolicy.Exclusions",
+			PropertyName: "ExcludeTags",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "ExcludeTags",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::DLM::LifecyclePolicy.ExcludeVolumeTypesList",
+		}).
+		// References invalid, deleted type "AWS::DLM::LifecyclePolicy.ExcludeVolumeTypesList",
+		// fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::DLM::LifecyclePolicy.Exclusions",
+			PropertyName: "ExcludeVolumeTypes",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "ExcludeVolumeTypesList",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+		}).
+		// Invalid type (unreferenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::DLM::LifecyclePolicy.VolumeTypeValues",
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::Glue::Table.MetadataOperation",
+		}).
+		// References invalid, deleted type "AWS::Glue::Table.MetadataOperation",
+		// fallback to String (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::Glue::Table.IcebergInput",
+			PropertyName: "MetadataOperation",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "MetadataOperation",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "String",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::Glue::SecurityConfiguration.S3Encryptions",
+		}).
+		// References invalid, deleted type "AWS::Glue::SecurityConfiguration.S3Encryptions",
+		// fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::Glue::SecurityConfiguration.EncryptionConfiguration",
+			PropertyName: "S3Encryptions",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "S3Encryptions",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::LakeFormation::DataLakeSettings.Admins",
+		}).
+		// References invalid, deleted type "AWS::LakeFormation::DataLakeSettings.Admins",
+		//fallback to List(DataLakePrincipal) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::LakeFormation::DataLakeSettings",
+			PropertyName: "Admins",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "Admins",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "DataLakePrincipal",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::LakeFormation::DataLakeSettings.CreateDatabaseDefaultPermissions",
+		}).
+		// References invalid, deleted type "AWS::LakeFormation::DataLakeSettings.CreateDatabaseDefaultPermissions",
+		// fallback to List(PrincipalPermissions) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::LakeFormation::DataLakeSettings",
+			PropertyName: "CreateDatabaseDefaultPermissions",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "CreateDatabaseDefaultPermissions",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "PrincipalPermissions",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::LakeFormation::DataLakeSettings.CreateTableDefaultPermissions",
+		}).
+		// References invalid, deleted type "AWS::LakeFormation::DataLakeSettings.CreateTableDefaultPermissions",
+		// fallback to List(PrincipalPermissions) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::LakeFormation::DataLakeSettings",
+			PropertyName: "CreateTableDefaultPermissions",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "CreateTableDefaultPermissions",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "PrincipalPermissions",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::LakeFormation::DataLakeSettings.ExternalDataFilteringAllowList",
+		}).
+		// References invalid, deleted type "AWS::LakeFormation::DataLakeSettings.ExternalDataFilteringAllowList",
+		// fallback to List(PrincipalPermissions) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::LakeFormation::DataLakeSettings",
+			PropertyName: "ExternalDataFilteringAllowList",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "ExternalDataFilteringAllowList",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "DataLakePrincipal",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::SageMaker::EndpointConfig.ClarifyFeatureType",
+		}).
+		// References invalid, deleted type "AWS::SageMaker::EndpointConfig.ClarifyHeader", fallback to List(String) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::SageMaker::EndpointConfig.ClarifyInferenceConfig",
+			PropertyName: "FeatureTypes",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "ClarifyFeatureType",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "String",
+				ItemType:          "",
+			},
+		}).
+		// Invalid type (referenced).
+		RegisterRawPatch(&RawPatchDeleteType{
+			TypeName: "AWS::SageMaker::EndpointConfig.ClarifyHeader",
+		}).
+		// References invalid, deleted type "AWS::SageMaker::EndpointConfig.ClarifyHeader", fallback to List(String) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::SageMaker::EndpointConfig.ClarifyInferenceConfig",
+			PropertyName: "FeatureHeaders",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "ClarifyHeader",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "String",
+				ItemType:          "",
+			},
+		}).
+		// References invalid, deleted type "AWS::SageMaker::EndpointConfig.ClarifyHeader", fallback to List(String) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::SageMaker::EndpointConfig.ClarifyInferenceConfig",
+			PropertyName: "LabelHeaders",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "ClarifyHeader",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "String",
+				ItemType:          "",
+			},
+		}).
+		// Special treatment for "Tag" because it is the only structured type shared across resources.
+		// It is also the only structured type that does not have a "." in its name.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName:              "Tag",
+			ForceIsStructuredType: memz.Ptr(true),
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::CodeBuild::Project.WebhookFilter",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Config::RemediationConfiguration.RemediationParameterValue",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Config::RemediationConfiguration.ResourceValue",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Config::RemediationConfiguration.StaticValue",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::DLM::LifecyclePolicy.CrossRegionCopyTarget",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Glue::SecurityConfiguration.S3Encryption",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::IoT1Click::Project.DeviceTemplate",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::Channel.MaintenanceUpdateSettings",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::Input.InputDeviceRequest",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::Input.MulticastSettingsUpdateRequest",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::Input.MulticastSourceUpdateRequest",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::SignalMap.MediaResource",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::SignalMap.MediaResourceNeighbor",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Pinpoint::Campaign.AttributeDimension",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Pinpoint::Campaign.MetricDimension",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Pinpoint::Segment.AttributeDimension",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::RDS::DBCluster.ReadEndpoint",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::SageMaker::Model.AdditionalModelDataSource",
+		}).
+		// Undocumented attribute with invalid type.
+		RegisterTypePatch("AWS::CleanRooms::IdNamespaceAssociation", &TypePatchDeleteAttribute{
+			AttributeName: "InputReferenceProperties.IdMappingWorkflowsSupported",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "Json",
+				ItemType:          "",
+			},
+		}).
+		// Undocumented attribute with invalid type.
+		RegisterTypePatch("AWS::CloudFormation::WaitCondition", &TypePatchDeleteAttribute{
+			AttributeName: "Data",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+		}).
+		// Undocumented attribute with invalid type.
+		RegisterTypePatch("AWS::IoTTwinMaker::Scene", &TypePatchDeleteAttribute{
+			AttributeName: "GeneratedSceneMetadata",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "Map",
+				PrimitiveItemType: "String",
+				ItemType:          "",
+			},
+		}).
+		// Undocumented attribute with invalid type.
+		RegisterTypePatch("AWS::MediaLive::SignalMap", &TypePatchDeleteAttribute{
+			AttributeName: "FailedMediaResourceMap",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "Map",
+				PrimitiveItemType: "",
+				ItemType:          "MediaResource",
+			},
+		}).
+		// Undocumented attribute with invalid type.
+		RegisterTypePatch("AWS::MediaLive::SignalMap", &TypePatchDeleteAttribute{
+			AttributeName: "MediaResourceMap",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "Map",
+				PrimitiveItemType: "",
+				ItemType:          "MediaResource",
+			},
+		}).
+		// Undocumented attribute with invalid type.
+		RegisterTypePatch("AWS::OpenSearchService::Domain", &TypePatchDeleteAttribute{
+			AttributeName: "DomainEndpoints",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "Map",
+				PrimitiveItemType: "String",
+				ItemType:          "",
+			},
+		}).
+		// Undocumented attribute with invalid type.
+		RegisterTypePatch("AWS::ServiceCatalog::CloudFormationProvisionedProduct", &TypePatchDeleteAttribute{
+			AttributeName: "Outputs",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "Map",
+				PrimitiveItemType: "String",
+				ItemType:          "",
+			},
+		})
 }
