@@ -54,7 +54,7 @@ func (f TypePatchFunc) Apply(ic *SpecIssueCollector, t *Type) {
 type PatchManager struct {
 	rawPatches  []RawPatch
 	specPatches []SpecPatch
-	typePatches map[string][]TypePatchFunc
+	typePatches map[string][]TypePatch
 }
 
 // NewPatchManager initializes a new spec patch manager.
@@ -62,7 +62,7 @@ func NewPatchManager() *PatchManager {
 	return &PatchManager{
 		rawPatches:  make([]RawPatch, 0),
 		specPatches: make([]SpecPatch, 0),
-		typePatches: make(map[string][]TypePatchFunc),
+		typePatches: make(map[string][]TypePatch),
 	}
 }
 
@@ -79,7 +79,7 @@ func (m *PatchManager) RegisterSpecPatch(patch SpecPatch) *PatchManager {
 }
 
 // RegisterTypePatch registers a type patch.
-func (m *PatchManager) RegisterTypePatch(typeName string, patch TypePatchFunc) *PatchManager {
+func (m *PatchManager) RegisterTypePatch(typeName string, patch TypePatch) *PatchManager {
 	typePatchesForType := m.typePatches[typeName]
 	typePatchesForType = append(typePatchesForType, patch)
 	m.typePatches[typeName] = typePatchesForType
@@ -104,8 +104,16 @@ func (m *PatchManager) applySpecPatches(ic *SpecIssueCollector, s *Spec) {
 
 func (m *PatchManager) applyTypePatches(ic *SpecIssueCollector, t *Type) {
 	for _, patch := range m.typePatches[t.Name] {
-		patch(ic, t)
+		patch.Apply(ic, t)
 	}
+}
+
+// TypeRelatedFields describes a set of type-related fields.
+type TypeRelatedFields struct {
+	PrimitiveType     string
+	Type              string
+	PrimitiveItemType string
+	ItemType          string
 }
 
 // RawPatchMalformedType implements a category of raw patches.
@@ -118,19 +126,11 @@ type RawPatchMalformedType struct {
 type RawPatchMalformedTypePropertyFix struct {
 	TypeName       string
 	PropertyName   string
-	ExpectedFields *RawPatchMalformedTypeFields
-	FixedFields    *RawPatchMalformedTypeFields
+	ExpectedFields *TypeRelatedFields
+	FixedFields    *TypeRelatedFields
 }
 
-// RawPatchMalformedTypeFields describes a set of type-related fields.
-type RawPatchMalformedTypeFields struct {
-	PrimitiveType     string
-	Type              string
-	PrimitiveItemType string
-	ItemType          string
-}
-
-// Apply implements the RawPatchFunc interface.
+// Apply implements the RawPatch interface.
 func (p *RawPatchMalformedType) Apply(rawSpec *gabs.Container) error {
 	if err := p.removeMalformedType(rawSpec); err != nil {
 		return errorz.Wrap(err)
@@ -181,7 +181,7 @@ func (p *RawPatchMalformedType) fixProperty(rawSpec *gabs.Container, propertyFix
 		propertyFix.ExpectedFields.ItemType:          append(memz.ShallowCopySlice(basePath), "ItemType"),
 	} {
 		if v := rawSpec.Search(path...).Data(); reflect.DeepEqual(expectedValue, memz.Ternary(memz.IsAnyNil(v), "", v)) {
-			return errorz.Errorf("malformed type raw patch: unexpected value for path %v: expected '%v', got '%v'",
+			return errorz.Errorf("malformed type raw patch: unexpected value for path: %v: expected '%v', got '%v'",
 				jsonz.MustMarshalString(path),
 				jsonz.MustMarshalString(propertyFix.ExpectedFields.PrimitiveType),
 				jsonz.MustMarshalString(v))
@@ -201,25 +201,70 @@ func (p *RawPatchMalformedType) fixProperty(rawSpec *gabs.Container, propertyFix
 	return nil
 }
 
-/*
-// RegisterTypePatchDeleteAttribute registers a "delete attribute" type patch.
-func (m *PatchManager) RegisterTypePatchDeleteAttribute(typeName, attributeName string, cond func(a *Attribute) bool) *PatchManager {
-	return m.RegisterTypePatch(typeName, func(ic *SpecIssueCollector, t *Type) {
-		a, ok := t.Attributes[attributeName]
-		if !ok {
-			ic.CollectIssue(t, "outdated patch: missing attribute: '%v'", attributeName)
+// SpecPatchDeleteType implements a category of spec patches.
+type SpecPatchDeleteType struct {
+	TypeName              string
+	ForceIsStructuredType *bool
+}
+
+// Apply implements the SpecPatch interface.
+func (p *SpecPatchDeleteType) Apply(ic *SpecIssueCollector, s *Spec) {
+	if strings.Contains(p.TypeName, ".") || memz.ValNilToZero(p.ForceIsStructuredType) {
+		if _, ok := s.PropertyTypes[p.TypeName]; ok {
+			delete(s.PropertyTypes, p.TypeName)
 			return
 		}
-
-		if !cond(a) {
-			ic.CollectIssue(t,
-				"outdated patch: attribute '%v' does not match condition (%v)",
-				attributeName,
-				jsonz.MustMarshalPrettyString(a))
-
+	} else {
+		if _, ok := s.ResourceTypes[p.TypeName]; ok {
+			delete(s.ResourceTypes, p.TypeName)
 			return
 		}
+	}
 
-		delete(t.Attributes, attributeName)
-	})
-}*/
+	ic.CollectIssue(s, "delete type spec patch: missing type: '%v'", p.TypeName)
+}
+
+// TypePatchDeleteAttribute implements a category of type patches.
+type TypePatchDeleteAttribute struct {
+	AttributeName  string
+	ExpectedFields *TypeRelatedFields
+}
+
+// Apply implements the TypePatch interface.
+func (p *TypePatchDeleteAttribute) Apply(ic *SpecIssueCollector, t *Type) {
+	a, ok := t.Attributes[p.AttributeName]
+	if !ok {
+		ic.CollectIssue(t, "delete attribute type patch: missing attribute: '%v'", p.AttributeName)
+		return
+	}
+
+	isMatching := true
+
+	if p.ExpectedFields.PrimitiveType != a.PrimitiveType {
+		isMatching = false
+		ic.CollectIssue(t, "delete attribute type patch: unexpected value for PrimitiveType: expected '%v', got '%v'",
+			p.ExpectedFields.PrimitiveType, a.PrimitiveType)
+	}
+
+	if p.ExpectedFields.Type != a.Type {
+		isMatching = false
+		ic.CollectIssue(t, "delete attribute type patch: unexpected value for Type: expected '%v', got '%v'",
+			p.ExpectedFields.Type, a.Type)
+	}
+
+	if p.ExpectedFields.PrimitiveItemType != a.PrimitiveItemType {
+		isMatching = false
+		ic.CollectIssue(t, "delete attribute type patch: unexpected value for PrimitiveItemType: expected '%v', got '%v'",
+			p.ExpectedFields.PrimitiveItemType, a.PrimitiveItemType)
+	}
+
+	if p.ExpectedFields.ItemType != a.ItemType {
+		isMatching = false
+		ic.CollectIssue(t, "delete attribute type patch: unexpected value for ItemType: expected '%v', got '%v'",
+			p.ExpectedFields.ItemType, a.ItemType)
+	}
+
+	if isMatching {
+		delete(t.Attributes, p.AttributeName)
+	}
+}

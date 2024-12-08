@@ -43,7 +43,7 @@ func NewSpecFromBuffer(buf []byte, pm *PatchManager) (*Spec, error) {
 	buf = rawSpec.Bytes()
 
 	d = json.NewDecoder(bytes.NewReader(buf))
-	d.DisallowUnknownFields()
+	//d.DisallowUnknownFields()
 	d.UseNumber()
 
 	var spec *Spec
