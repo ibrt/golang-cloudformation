@@ -81,6 +81,9 @@ type {{ .GoName }} struct {
 
         // __UpdateReplacePolicy indicates the update replace behavior of CloudFormation for this resource.
         __UpdateReplacePolicy {{ .GoSupportBasePackage }}.ResourceUpdateReplacePolicy `json:"-"`
+
+        // __RequestedOutputs allows to group outputs together with resources, for later inclusion in a template.
+        __RequestedOutputs []*{{ .GoSupportBasePackage }}.Output
     {{ end }}
 
     {{- range $k, $v := .Properties }}
@@ -110,6 +113,12 @@ type {{ .GoName }} struct {
     func (t *{{ .GoName }}) GetResourceLogicalName() string {
         return t.__LogicalName
     }
+
+    // GetRequestedOutputs returns the requested outputs for this resource in the template.
+    // It implements the {{ .GoSupportBasePackage }}.Resource interface.
+    func (t * {{ .GoName }}) GetRequestedOutputs() []*{{ .GoSupportBasePackage }}.Output {
+        return t.__RequestedOutputs
+    }
 {{ end }}
 
 // GetType returns the CloudFormation type.{{ if .IsTopLevelResourceType }}
@@ -117,6 +126,50 @@ type {{ .GoName }} struct {
 func ({{ if .IsTopLevelResourceType }}*{{ end }}{{ .GoName }}) GetType() string {
     return {{ .GoName }}__Type
 }
+
+{{ if .IsTopLevelResourceType }}
+    // Set__LogicalName updates field "__LogicalName".
+    func (t *{{ $.GoName }}) Set__LogicalName(v string) *{{ $.GoName }} {
+        t.__LogicalName = v
+        return t
+    }
+
+    // Set__DependsOn updates (replaces) field "__DependsOn".
+    func (t *{{ $.GoName }}) Set__DependsOn(v []{{ .GoSupportBasePackage }}.ResourcePartialLogicalName) *{{ $.GoName }} {
+        t.__DependsOn = v
+        return t
+    }
+
+    // Add__DependsOn updates (appends to) field "__DependsOn".
+    func (t *{{ $.GoName }}) Add__DependsOn(v ...{{ .GoSupportBasePackage }}.ResourcePartialLogicalName) *{{ $.GoName }} {
+        t.__DependsOn = append(t.__DependsOn, v...)
+        return t
+    }
+
+    // Set__DeletionPolicy updates field "__DeletionPolicy".
+    func (t *{{ $.GoName }}) Set__DeletionPolicy(v {{ .GoSupportBasePackage }}.ResourceDeletionPolicy) *{{ $.GoName }} {
+        t.__DeletionPolicy = v
+        return t
+    }
+
+    // Set__UpdateReplacePolicy updates field "__UpdateReplacePolicy".
+    func (t *{{ $.GoName }}) Set__UpdateReplacePolicy(v {{ .GoSupportBasePackage }}.ResourceUpdateReplacePolicy) *{{ $.GoName }} {
+        t.__UpdateReplacePolicy = v
+        return t
+    }
+
+    // Set__RequestedOutputs updates (replaces) field "__RequestedOutputs".
+    func (t *{{ $.GoName }}) Set__RequestedOutputs(v []*{{ .GoSupportBasePackage }}.Output) *{{ $.GoName }} {
+        t.__RequestedOutputs = v
+        return t
+    }
+
+    // Add__RequestedOutputs updates (appends to) field "__RequestedOutputs".
+    func (t *{{ $.GoName }}) Add__RequestedOutputs(v ...*{{ .GoSupportBasePackage }}.Output) *{{ $.GoName }} {
+        t.__RequestedOutputs = append(t.__RequestedOutputs, v...)
+        return t
+    }
+{{ end }}
 
 {{range $k, $v := .Properties }}
     // Set__{{ $v.GoName }} updates property "{{ $v.Name }}".

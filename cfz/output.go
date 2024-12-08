@@ -7,6 +7,10 @@ import (
 	"github.com/ibrt/golang-utils/memz"
 )
 
+var (
+	_ json.Marshaler = (*Output)(nil)
+)
+
 // Output describes an output.
 type Output struct {
 	LogicalName string             `json:"-"`
