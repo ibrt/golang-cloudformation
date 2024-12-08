@@ -181,8 +181,26 @@ func NewDefaultPatchManager() *PatchManager {
 				ItemType:          "",
 			},
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::LakeFormation::DataLakeSettings.Admins",
+		}).
+		// References invalid, deleted type "AWS::LakeFormation::DataLakeSettings.Admins", fallback to List(DataLakePrincipal) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::LakeFormation::DataLakeSettings",
+			PropertyName: "Admins",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "Admins",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "DataLakePrincipal",
+			},
 		}).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::LakeFormation::DataLakeSettings.CreateDatabaseDefaultPermissions",
