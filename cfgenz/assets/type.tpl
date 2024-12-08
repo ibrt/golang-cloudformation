@@ -83,7 +83,7 @@ type {{ .GoName }} struct {
         __UpdateReplacePolicy {{ .GoSupportBasePackage }}.ResourceUpdateReplacePolicy `json:"-"`
 
         // __RequestedOutputs allows to group outputs together with resources, for later inclusion in a template.
-        __RequestedOutputs []*{{ .GoSupportBasePackage }}.Output
+        __RequestedOutputs []{{ .GoSupportBasePackage }}.Output
     {{ end }}
 
     {{- range $k, $v := .Properties }}
@@ -116,7 +116,7 @@ type {{ .GoName }} struct {
 
     // GetRequestedOutputs returns the requested outputs for this resource in the template.
     // It implements the {{ .GoSupportBasePackage }}.Resource interface.
-    func (t * {{ .GoName }}) GetRequestedOutputs() []*{{ .GoSupportBasePackage }}.Output {
+    func (t * {{ .GoName }}) GetRequestedOutputs() []{{ .GoSupportBasePackage }}.Output {
         return t.__RequestedOutputs
     }
 {{ end }}
@@ -159,13 +159,13 @@ func ({{ if .IsTopLevelResourceType }}*{{ end }}{{ .GoName }}) GetType() string 
     }
 
     // Set__RequestedOutputs updates (replaces) field "__RequestedOutputs".
-    func (t *{{ $.GoName }}) Set__RequestedOutputs(v []*{{ .GoSupportBasePackage }}.Output) *{{ $.GoName }} {
+    func (t *{{ $.GoName }}) Set__RequestedOutputs(v []{{ .GoSupportBasePackage }}.Output) *{{ $.GoName }} {
         t.__RequestedOutputs = v
         return t
     }
 
     // Add__RequestedOutputs updates (appends to) field "__RequestedOutputs".
-    func (t *{{ $.GoName }}) Add__RequestedOutputs(v ...*{{ .GoSupportBasePackage }}.Output) *{{ $.GoName }} {
+    func (t *{{ $.GoName }}) Add__RequestedOutputs(v ...{{ .GoSupportBasePackage }}.Output) *{{ $.GoName }} {
         t.__RequestedOutputs = append(t.__RequestedOutputs, v...)
         return t
     }
@@ -230,8 +230,8 @@ func ({{ if .IsTopLevelResourceType }}*{{ end }}{{ .GoName }}) GetType() string 
     {{ end }}
 
     // GetConventionalOutputRef returns a conventionally configured output for the Ref of this resource.
-    func (t *{{ .GoName }}) GetConventionalOutputRef(isExported bool) *{{ .GoSupportBasePackage }}.Output {
-        o := {{ .GoSupportBasePackage }}.NewOutput(t.GetResourceLogicalName()+"Ref").SetValue(t.Ref())
+    func (t *{{ .GoName }}) GetConventionalOutputRef(isExported bool) {{ .GoSupportBasePackage }}.Output {
+        o := {{ .GoSupportBasePackage }}.NewOutput(t.GetResourceLogicalName()+"Ref", t.Ref())
         if isExported {
             o.SetConventionalExportName()
         }
@@ -241,8 +241,8 @@ func ({{ if .IsTopLevelResourceType }}*{{ end }}{{ .GoName }}) GetType() string 
     {{ range $k, $v := .Attributes }}
         // GetConventionalOutputAtt__{{ $v.GoName }} returns a conventionally configured output for an attribute of this resource.
         // Attribute: {{ $v.Name }}
-        func (t *{{ $.GoName }}) GetConventionalOutputAtt__{{ $v.GoName }}(isExported bool) *{{ $.GoSupportBasePackage }}.Output {
-            o := {{ $.GoSupportBasePackage }}.NewOutput(t.GetResourceLogicalName()+"Att{{ $v.NameForLogicalNames }}").SetValue(t.GetAtt__{{ $v.GoName }}())
+        func (t *{{ $.GoName }}) GetConventionalOutputAtt__{{ $v.GoName }}(isExported bool) {{ $.GoSupportBasePackage }}.Output {
+            o := {{ $.GoSupportBasePackage }}.NewOutput(t.GetResourceLogicalName()+"Att{{ $v.NameForLogicalNames }}", t.{{ $v.SupportGetAttFunctionName }}__{{ $v.GoName }}())
             if isExported {
                 o.SetConventionalExportName()
             }

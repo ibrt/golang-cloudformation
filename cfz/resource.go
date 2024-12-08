@@ -21,7 +21,7 @@ func (r ResourceLogicalName) GetResourceLogicalName() string {
 type Resource interface {
 	ResourcePartialLogicalName
 	GetType() string
-	GetRequestedOutputs() []*Output
+	GetRequestedOutputs() []Output
 	json.Marshaler
 }
 
