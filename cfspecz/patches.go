@@ -345,6 +345,78 @@ func NewDefaultPatchManager() *PatchManager {
 			TypeName:              "Tag",
 			ForceIsStructuredType: memz.Ptr(true),
 		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::CodeBuild::Project.WebhookFilter",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Config::RemediationConfiguration.RemediationParameterValue",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Config::RemediationConfiguration.ResourceValue",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Config::RemediationConfiguration.StaticValue",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::DLM::LifecyclePolicy.CrossRegionCopyTarget",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Glue::SecurityConfiguration.S3Encryption",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::IoT1Click::Project.DeviceTemplate",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::Channel.MaintenanceUpdateSettings",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::Input.InputDeviceRequest",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::Input.MulticastSettingsUpdateRequest",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::Input.MulticastSourceUpdateRequest",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::SignalMap.MediaResource",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::MediaLive::SignalMap.MediaResourceNeighbor",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Pinpoint::Campaign.AttributeDimension",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Pinpoint::Campaign.MetricDimension",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::Pinpoint::Segment.AttributeDimension",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::RDS::DBCluster.ReadEndpoint",
+		}).
+		// Unreferenced structured type.
+		RegisterSpecPatch(&SpecPatchDeleteType{
+			TypeName: "AWS::SageMaker::Model.AdditionalModelDataSource",
+		}).
 		// Undocumented attribute with invalid type.
 		RegisterTypePatch("AWS::CleanRooms::IdNamespaceAssociation", &TypePatchDeleteAttribute{
 			AttributeName: "InputReferenceProperties.IdMappingWorkflowsSupported",
