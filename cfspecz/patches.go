@@ -121,8 +121,26 @@ func NewDefaultPatchManager() *PatchManager {
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::DLM::LifecyclePolicy.VolumeTypeValues",
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::Glue::Table.MetadataOperation",
+		}).
+		// References invalid, deleted type "AWS::Glue::Table.MetadataOperation", fallback to String (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::Glue::Table.IcebergInput",
+			PropertyName: "S3Encryptions",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "MetadataOperation",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "String",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
 		}).
 		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
