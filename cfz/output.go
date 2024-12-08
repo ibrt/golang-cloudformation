@@ -103,10 +103,5 @@ func (b *OutputBuilder) SetConventionalExportName() *OutputBuilder {
 
 // Build the output.
 func (b *OutputBuilder) Build() Output {
-	return &OutputImpl{
-		LogicalName: b.i.LogicalName,
-		Description: b.i.Description,
-		Value:       b.i.Value,
-		ExportName:  b.i.ExportName,
-	}
+	return b.i
 }
