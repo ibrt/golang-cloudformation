@@ -1,51 +1,52 @@
 package cfspecz
 
-import (
-	"fmt"
-
-	"github.com/Jeffail/gabs/v2"
-	"github.com/ibrt/golang-utils/errorz"
-	"github.com/ibrt/golang-utils/jsonz"
-)
-
-// RawPatch describes a patch applicable to the raw spec (i.e. before parsing into structs).
-type RawPatch func(rawSpec *gabs.Container) error
-
-// SpecPatch describes a patch applicable to a spec.
-type SpecPatch func(ic *SpecIssueCollector, s *Spec)
-
-// TypePatch describes a patch applicable to a type.
-type TypePatch func(ic *SpecIssueCollector, t *Type)
-
-// SpecPatchManager manages a set of patches for a spec.
-type SpecPatchManager struct {
-	rawPatches  []RawPatch
-	specPatches []SpecPatch
-	typePatches map[string][]TypePatch
-}
-
-// NewSpecPatchManager initializes a new spec patch manager.
-func NewSpecPatchManager() *SpecPatchManager {
-	return &SpecPatchManager{
-		rawPatches:  make([]RawPatch, 0),
-		specPatches: make([]SpecPatch, 0),
-		typePatches: make(map[string][]TypePatch),
-	}
-}
-
+/*
 // NewDefaultSpecPatchManager initializes a new spec patch manager and configures it with default, known patchers.
-func NewDefaultSpecPatchManager() *SpecPatchManager {
-	return NewSpecPatchManager().
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::DLM::LifecyclePolicy.ExcludeVolumeTypesList").
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::LakeFormation::DataLakeSettings.CreateTableDefaultPermissions").
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::LakeFormation::DataLakeSettings.ExternalDataFilteringAllowList").
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets").
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::Glue::SecurityConfiguration.S3Encryptions").
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::DLM::LifecyclePolicy.ExcludeTags").
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::CodeBuild::Project.FilterGroup").
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::LakeFormation::DataLakeSettings.CreateDatabaseDefaultPermissions").
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::CloudWatch::AnomalyDetector.MetricDataQueries").
-		RegisterRawPatchDeletePath("PropertyTypes", "AWS::LakeFormation::DataLakeSettings.Admins").
+func NewDefaultSpecPatchManager() *PatchManager {
+	return NewPatchManager().
+		RegisterRawPatch(&RawPatchMalformedType{
+			TypeName: "AWS::CodeBuild::Project.FilterGroup",
+			PropertyFixes: []*RawPatchMalformedTypePropertyFix{
+				{
+					TypeName:     "AWS::CodeBuild::Project.ProjectTriggers",
+					PropertyName: "FilterGroups",
+					ExpectedFields: &RawPatchMalformedTypeFields{
+						PrimitiveType:     "",
+						Type:              "List",
+						PrimitiveItemType: "",
+						ItemType:          "FilterGroup",
+					},
+				},
+			},
+		}).
+		// Spurious structured type, property is List(List(WebhookFilter)).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::CodeBuild::Project.FilterGroup"}).
+		RegisterRawPatchSetPath([]string{"PropertyTypes", "AWS::CodeBuild::Project.ProjectTriggers", "Properties", "FilterGroups", "Type"}, "List", nil).
+		RegisterRawPatchSetPath([]string{"PropertyTypes", "AWS::CodeBuild::Project.ProjectTriggers", "Properties", "FilterGroups", "ItemType"}, "FilterGroup", nil).
+		RegisterRawPatchSetPath([]string{"PropertyTypes", "AWS::CodeBuild::Project.ProjectTriggers", "Properties", "FilterGroups", "PrimitiveType"}, nil, "Json").
+
+		// Spurious structured type, property is List(Tag).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::DLM::LifecyclePolicy.ExcludeTags"}).
+
+		// Spurious structured type, property is List(VolumeTypeValues)
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::DLM::LifecyclePolicy.ExcludeVolumeTypesList"}).
+
+		// Note: all these structured types are malformed and don't appear in the CloudFormation documentation.
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::CloudWatch::AnomalyDetector.MetricDataQueries"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::CloudWatch::InsightRule.Tags"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::DLM::LifecyclePolicy.VolumeTypeValues"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::Glue::SecurityConfiguration.S3Encryptions"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::Glue::Table.MetadataOperation"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::LakeFormation::DataLakeSettings.Admins"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::LakeFormation::DataLakeSettings.CreateDatabaseDefaultPermissions"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::LakeFormation::DataLakeSettings.CreateTableDefaultPermissions"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::LakeFormation::DataLakeSettings.ExternalDataFilteringAllowList"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::SageMaker::EndpointConfig.ClarifyFeatureType"}).
+		RegisterRawPatchDelPath([]string{"PropertyTypes", "AWS::SageMaker::EndpointConfig.ClarifyHeader"}).
+		// Note: we currently do not natively support custom resources, although clients can create their own by implementing cfz.Resource.
+		// We remove it here because it has an unexpected "AdditionalProperties" field.
+		RegisterRawPatchDelPath([]string{"ResourceTypes", "AWS::CloudFormation::CustomResource"}).
 		RegisterSpecPatch(
 			func(ic *SpecIssueCollector, s *Spec) {
 				if _, ok := s.PropertyTypes["Tag"]; ok {
@@ -84,78 +85,4 @@ func NewDefaultSpecPatchManager() *SpecPatchManager {
 			"Outputs",
 			func(a *Attribute) bool { return a.Type == "Map" && a.PrimitiveItemType == "String" })
 }
-
-// RegisterRawPatch registers a raw patch.
-func (m *SpecPatchManager) RegisterRawPatch(patch RawPatch) *SpecPatchManager {
-	m.rawPatches = append(m.rawPatches, patch)
-	return m
-}
-
-// RegisterRawPatchDeletePath registers a "delete path" raw patch.
-func (m *SpecPatchManager) RegisterRawPatchDeletePath(hierarchy ...string) *SpecPatchManager {
-	return m.RegisterRawPatch(func(rawSpec *gabs.Container) error {
-		if !rawSpec.Exists(hierarchy...) {
-			return errorz.Errorf("outated patch: missing path: %v", jsonz.MustMarshalString(hierarchy))
-		}
-
-		return errorz.MaybeWrap(rawSpec.Delete(hierarchy...))
-	})
-}
-
-// RegisterSpecPatch registers a spec patch.
-func (m *SpecPatchManager) RegisterSpecPatch(patch SpecPatch) *SpecPatchManager {
-	m.specPatches = append(m.specPatches, patch)
-	return m
-}
-
-// RegisterTypePatch registers a type patch.
-func (m *SpecPatchManager) RegisterTypePatch(typeName string, patch TypePatch) *SpecPatchManager {
-	typePatchesForType := m.typePatches[typeName]
-	typePatchesForType = append(typePatchesForType, patch)
-	m.typePatches[typeName] = typePatchesForType
-	return m
-}
-
-// RegisterTypePatchDeleteAttribute registers a "delete attribute" type patch.
-func (m *SpecPatchManager) RegisterTypePatchDeleteAttribute(typeName, attributeName string, cond func(a *Attribute) bool) *SpecPatchManager {
-	return m.RegisterTypePatch(typeName, func(ic *SpecIssueCollector, t *Type) {
-		a, ok := t.Attributes[attributeName]
-		if !ok {
-			ic.CollectIssue(t, "outdated patch: missing attribute: '%v'", attributeName)
-			return
-		}
-
-		if !cond(a) {
-			ic.CollectIssue(t,
-				"outdated patch: attribute '%v' does not match condition (%v)",
-				attributeName,
-				jsonz.MustMarshalPrettyString(a))
-
-			return
-		}
-
-		delete(t.Attributes, attributeName)
-	})
-}
-
-func (m *SpecPatchManager) applyRawPatches(raw *gabs.Container) error {
-	for i, patch := range m.rawPatches {
-		if err := patch(raw); err != nil {
-			return errorz.Wrap(err, fmt.Errorf("raw patch #%v", i))
-		}
-	}
-
-	return nil
-}
-
-func (m *SpecPatchManager) applySpecPatches(ic *SpecIssueCollector, s *Spec) {
-	for _, patch := range m.specPatches {
-		patch(ic, s)
-	}
-}
-
-func (m *SpecPatchManager) applyTypePatches(ic *SpecIssueCollector, t *Type) {
-	for _, patch := range m.typePatches[t.Name] {
-		patch(ic, t)
-	}
-}
+*/

@@ -53,7 +53,7 @@ func (t *Type) preProcess(spec *Spec, isTopLevelResourceType bool, name string) 
 	}
 }
 
-func (t *Type) applyPatches(ic *SpecIssueCollector, pm *SpecPatchManager) {
+func (t *Type) applyPatches(ic *SpecIssueCollector, pm *PatchManager) {
 	pm.applyTypePatches(ic, t)
 }
 

@@ -26,7 +26,7 @@ type Spec struct {
 
 // NewSpecFromBuffer parses, patches (using the given spec patch manager), and validates a CloudFormation spec from the
 // given buffer (i.e. "CloudFormationResourceSpecification.json" file).
-func NewSpecFromBuffer(buf []byte, pm *SpecPatchManager) (*Spec, error) {
+func NewSpecFromBuffer(buf []byte, pm *PatchManager) (*Spec, error) {
 	d := json.NewDecoder(bytes.NewReader(buf))
 	d.DisallowUnknownFields()
 	d.UseNumber()
@@ -80,7 +80,7 @@ func (s *Spec) preProcess() {
 	}
 }
 
-func (s *Spec) applyPatches(pm *SpecPatchManager) error {
+func (s *Spec) applyPatches(pm *PatchManager) error {
 	ic := NewSpecIssueCollector()
 	pm.applySpecPatches(ic, s)
 

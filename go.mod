@@ -3,12 +3,12 @@ module github.com/ibrt/golang-cloudformation
 go 1.23
 
 require (
+	github.com/Jeffail/gabs/v2 v2.7.0
 	github.com/ibrt/golang-utils v0.2.0
 	github.com/onsi/gomega v1.36.0
 )
 
 require (
-	github.com/Jeffail/gabs/v2 v2.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
