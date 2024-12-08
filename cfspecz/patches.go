@@ -128,7 +128,7 @@ func NewDefaultPatchManager() *PatchManager {
 		// References invalid, deleted type "AWS::Glue::Table.MetadataOperation", fallback to String (as documented).
 		RegisterRawPatch(&RawPatchFixPropertyType{
 			TypeName:     "AWS::Glue::Table.IcebergInput",
-			PropertyName: "S3Encryptions",
+			PropertyName: "MetadataOperation",
 			ExpectedFields: &PropertyOrAttributeTypeFields{
 				PrimitiveType:     "",
 				Type:              "MetadataOperation",
@@ -178,8 +178,26 @@ func NewDefaultPatchManager() *PatchManager {
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::SageMaker::EndpointConfig.ClarifyFeatureType",
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::SageMaker::EndpointConfig.ClarifyHeader",
+		}).
+		// References invalid, deleted type "AWS::SageMaker::EndpointConfig.ClarifyHeader", fallback to List(String) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::SageMaker::EndpointConfig.ClarifyInferenceConfig",
+			PropertyName: "FeatureHeaders",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "ClarifyHeader",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "String",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
 		}).
 		// Special treatment for "Tag" because it is the only structured type shared across resources.
 		// It is also the only structured type that does not have a "." in its name.
