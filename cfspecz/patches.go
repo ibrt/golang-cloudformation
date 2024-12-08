@@ -41,8 +41,26 @@ func NewDefaultPatchManager() *PatchManager {
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::DLM::LifecyclePolicy.CrossRegionCopyTargets",
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::DLM::LifecyclePolicy.ExcludeTags",
+		}).
+		// References invalid, deleted type "AWS::DLM::LifecyclePolicy.ExcludeTags", fallback to JSON.
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::DLM::LifecyclePolicy.Exclusions",
+			PropertyName: "ExcludeTags",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "ExcludeTags",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "Json",
+				Type:              "",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
 		}).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::DLM::LifecyclePolicy.ExcludeVolumeTypesList",
