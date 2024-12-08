@@ -256,8 +256,27 @@ func NewDefaultPatchManager() *PatchManager {
 				ItemType:          "PrincipalPermissions",
 			},
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::LakeFormation::DataLakeSettings.ExternalDataFilteringAllowList",
+		}).
+		// References invalid, deleted type "AWS::LakeFormation::DataLakeSettings.ExternalDataFilteringAllowList",
+		// fallback to List(PrincipalPermissions) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::LakeFormation::DataLakeSettings",
+			PropertyName: "ExternalDataFilteringAllowList",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "ExternalDataFilteringAllowList",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "DataLakePrincipal",
+			},
 		}).
 		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
