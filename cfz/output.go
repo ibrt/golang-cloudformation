@@ -7,20 +7,8 @@ import (
 	"github.com/ibrt/golang-utils/memz"
 )
 
-// OutputPartialLogicalName describes a subset of a CloudFormation output.
-type OutputPartialLogicalName interface {
-	GetOutputLogicalName() string
-}
-
-// Output describes a CloudFormation output.
-// See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html
-type Output interface {
-	OutputPartialLogicalName
-	json.Marshaler
-}
-
-// OutputImpl is a provided implementation of the Output interface, which can be directly used as a struct pointer.
-type OutputImpl struct {
+// Output describes an output.
+type Output struct {
 	LogicalName string             `json:"-"`
 	Description string             `json:"-"`
 	Value       Expression[string] `json:"-"`
@@ -37,71 +25,59 @@ type outputImplExport struct {
 	Name Expression[string] `json:"Name,omitempty"`
 }
 
-// GetOutputLogicalName implements the Output interface.
-func (o *OutputImpl) GetOutputLogicalName() string {
+// NewOutput initializes a new output.
+func NewOutput(logicalName string) *Output {
+	return &Output{
+		LogicalName: logicalName,
+	}
+}
+
+// GetOutputLogicalName returns the logical name of the output.
+func (o *Output) GetOutputLogicalName() string {
 	return o.LogicalName
 }
 
-// MarshalJSON implements the Output interface.
-func (o *OutputImpl) MarshalJSON() ([]byte, error) {
+// SetDescription sets the description.
+func (o *Output) SetDescription(description string) *Output {
+	o.Description = description
+	return o
+}
+
+// SetValue sets the value.
+func (o *Output) SetValue(value Expression[string]) *Output {
+	o.Value = value
+	return o
+}
+
+// SetVValue sets the value.
+func (o *Output) SetVValue(value string) *Output {
+	o.Value = V(value)
+	return o
+}
+
+// SetExportName sets the export name.
+func (o *Output) SetExportName(exportName Expression[string]) *Output {
+	o.ExportName = exportName
+	return o
+}
+
+// SetVExportName sets the export name.
+func (o *Output) SetVExportName(exportName string) *Output {
+	o.ExportName = V(exportName)
+	return o
+}
+
+// SetConventionalExportName sets the export name to "${AWS::StackName}-<current value of LogicalName>".
+func (o *Output) SetConventionalExportName() *Output {
+	o.ExportName = Sub(fmt.Sprintf("${AWS::StackName}-%v", o.LogicalName))
+	return o
+}
+
+// MarshalJSON marshals the output.
+func (o *Output) MarshalJSON() ([]byte, error) {
 	return json.Marshal(outputImpl{
 		Description: o.Description,
 		Value:       o.Value,
 		Export:      memz.Ternary(o.ExportName != nil, &outputImplExport{Name: o.ExportName}, nil),
 	})
-}
-
-// OutputBuilder is a provided utility for creating outputs with a fluent interface.
-type OutputBuilder struct {
-	i *OutputImpl
-}
-
-// NewOutputBuilder initializes a new output builder.
-func NewOutputBuilder(logicalName string) *OutputBuilder {
-	return &OutputBuilder{
-		i: &OutputImpl{
-			LogicalName: logicalName,
-		},
-	}
-}
-
-// SetDescription sets the description.
-func (b *OutputBuilder) SetDescription(description string) *OutputBuilder {
-	b.i.Description = description
-	return b
-}
-
-// SetValue sets the value from an Expression[string]
-func (b *OutputBuilder) SetValue(value Expression[string]) *OutputBuilder {
-	b.i.Value = value
-	return b
-}
-
-// SetValueString sets the value from a constant string value.
-func (b *OutputBuilder) SetValueString(value string) *OutputBuilder {
-	b.i.Value = V(value)
-	return b
-}
-
-// SetExportName sets the export name from an Expression[string]
-func (b *OutputBuilder) SetExportName(exportName Expression[string]) *OutputBuilder {
-	b.i.ExportName = exportName
-	return b
-}
-
-// SetExportNameString sets the export name from a constant string value.
-func (b *OutputBuilder) SetExportNameString(exportName Expression[string]) *OutputBuilder {
-	b.i.ExportName = exportName
-	return b
-}
-
-// SetConventionalExportName generates and sets an export name like "${AWS::StackName}-${OutputLogicalName}".
-func (b *OutputBuilder) SetConventionalExportName() *OutputBuilder {
-	b.i.ExportName = Sub(fmt.Sprintf("${AWS::StackName}-%v", b.i.LogicalName))
-	return b
-}
-
-// Build the output.
-func (b *OutputBuilder) Build() Output {
-	return b.i
 }
