@@ -175,8 +175,26 @@ func NewDefaultPatchManager() *PatchManager {
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::LakeFormation::DataLakeSettings.ExternalDataFilteringAllowList",
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::SageMaker::EndpointConfig.ClarifyFeatureType",
+		}).
+		// References invalid, deleted type "AWS::SageMaker::EndpointConfig.ClarifyHeader", fallback to List(String) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::SageMaker::EndpointConfig.ClarifyInferenceConfig",
+			PropertyName: "FeatureTypes",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "ClarifyFeatureType",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "String",
+				ItemType:          "",
+			},
 		}).
 		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
@@ -193,9 +211,9 @@ func NewDefaultPatchManager() *PatchManager {
 				ItemType:          "ClarifyHeader",
 			},
 			FixedFields: &PropertyOrAttributeTypeFields{
-				PrimitiveType:     "String",
+				PrimitiveType:     "",
 				Type:              "List",
-				PrimitiveItemType: "",
+				PrimitiveItemType: "String",
 				ItemType:          "",
 			},
 		}).
