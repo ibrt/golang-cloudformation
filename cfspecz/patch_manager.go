@@ -50,14 +50,14 @@ func (f TypePatchFunc) Apply(ic *SpecIssueCollector, t *Type) {
 	f(ic, t)
 }
 
-// PatchManager manages a set of patches for a spec.
+// PatchManager registers and applies patches for a spec.
 type PatchManager struct {
 	rawPatches  []RawPatch
 	specPatches []SpecPatch
 	typePatches map[string][]TypePatch
 }
 
-// NewPatchManager initializes a new spec patch manager.
+// NewPatchManager initializes a new patch manager.
 func NewPatchManager() *PatchManager {
 	return &PatchManager{
 		rawPatches:  make([]RawPatch, 0),
