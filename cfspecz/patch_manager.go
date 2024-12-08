@@ -108,51 +108,28 @@ func (m *PatchManager) applyTypePatches(ic *SpecIssueCollector, t *Type) {
 	}
 }
 
-// TypeRelatedFields describes a set of type-related fields.
-type TypeRelatedFields struct {
+// PropertyOrAttributeTypeFields describes a set of type-related fields.
+type PropertyOrAttributeTypeFields struct {
 	PrimitiveType     string
 	Type              string
 	PrimitiveItemType string
 	ItemType          string
 }
 
-// RawPatchMalformedType implements a category of raw patches.
-type RawPatchMalformedType struct {
-	TypeName      string
-	PropertyFixes []*RawPatchMalformedTypePropertyFix
-}
-
-// RawPatchMalformedTypePropertyFix describes how to fix a property.
-type RawPatchMalformedTypePropertyFix struct {
-	TypeName       string
-	PropertyName   string
-	ExpectedFields *TypeRelatedFields
-	FixedFields    *TypeRelatedFields
+// RawPatchDeleteType implements a category of raw patches.
+type RawPatchDeleteType struct {
+	TypeName string
 }
 
 // Apply implements the RawPatch interface.
-func (p *RawPatchMalformedType) Apply(rawSpec *gabs.Container) error {
-	if err := p.removeMalformedType(rawSpec); err != nil {
-		return errorz.Wrap(err)
-	}
-
-	for _, propertyFix := range p.PropertyFixes {
-		if err := p.fixProperty(rawSpec, propertyFix); err != nil {
-			return errorz.Wrap(err)
-		}
-	}
-
-	return nil
-}
-
-func (p *RawPatchMalformedType) removeMalformedType(rawSpec *gabs.Container) error {
+func (p *RawPatchDeleteType) Apply(rawSpec *gabs.Container) error {
 	path := []string{
 		memz.Ternary(strings.Contains(p.TypeName, "."), "PropertyTypes", "ResourceTypes"),
 		p.TypeName,
 	}
 
 	if !rawSpec.Exists(path...) {
-		return errorz.Errorf("malformed type raw patch: missing path: %v", jsonz.MustMarshalString(path))
+		return errorz.Errorf("delete type raw patch: missing path: %v", jsonz.MustMarshalString(path))
 	}
 
 	if err := rawSpec.Delete(path...); err != nil {
@@ -162,40 +139,63 @@ func (p *RawPatchMalformedType) removeMalformedType(rawSpec *gabs.Container) err
 	return nil
 }
 
-func (p *RawPatchMalformedType) fixProperty(rawSpec *gabs.Container, propertyFix *RawPatchMalformedTypePropertyFix) error {
+// RawPatchFixPropertyType implements a category of raw patches.
+type RawPatchFixPropertyType struct {
+	TypeName       string
+	PropertyName   string
+	ExpectedFields *PropertyOrAttributeTypeFields
+	FixedFields    *PropertyOrAttributeTypeFields
+}
+
+// Apply implements the RawPatch interface.
+func (p *RawPatchFixPropertyType) Apply(rawSpec *gabs.Container) error {
 	basePath := []string{
-		memz.Ternary(strings.Contains(propertyFix.TypeName, "."), "PropertyTypes", "ResourceTypes"),
-		propertyFix.TypeName,
+		memz.Ternary(strings.Contains(p.TypeName, "."), "PropertyTypes", "ResourceTypes"),
+		p.TypeName,
 		"Properties",
-		propertyFix.PropertyName,
+		p.PropertyName,
 	}
 
 	if !rawSpec.Exists(basePath...) {
-		return errorz.Errorf("malformed type raw patch: missing path: %v", jsonz.MustMarshalString(basePath))
+		return errorz.Errorf("fix property type raw patch: missing path: %v", jsonz.MustMarshalString(basePath))
 	}
 
-	for expectedValue, path := range map[string][]string{
-		propertyFix.ExpectedFields.PrimitiveType:     append(memz.ShallowCopySlice(basePath), "PrimitiveType"),
-		propertyFix.ExpectedFields.Type:              append(memz.ShallowCopySlice(basePath), "Type"),
-		propertyFix.ExpectedFields.PrimitiveItemType: append(memz.ShallowCopySlice(basePath), "PrimitiveItemType"),
-		propertyFix.ExpectedFields.ItemType:          append(memz.ShallowCopySlice(basePath), "ItemType"),
+	for _, m := range []struct {
+		path          []string
+		expectedValue string
+		fixedValue    string
+	}{
+		{
+			path:          append(memz.ShallowCopySlice(basePath), "PrimitiveType"),
+			expectedValue: p.ExpectedFields.PrimitiveType,
+			fixedValue:    p.FixedFields.PrimitiveType,
+		},
+		{
+			path:          append(memz.ShallowCopySlice(basePath), "Type"),
+			expectedValue: p.ExpectedFields.Type,
+			fixedValue:    p.FixedFields.Type,
+		},
+		{
+			path:          append(memz.ShallowCopySlice(basePath), "PrimitiveItemType"),
+			expectedValue: p.ExpectedFields.PrimitiveItemType,
+			fixedValue:    p.FixedFields.PrimitiveItemType,
+		},
+		{
+			path:          append(memz.ShallowCopySlice(basePath), "ItemType"),
+			expectedValue: p.ExpectedFields.ItemType,
+			fixedValue:    p.FixedFields.ItemType,
+		},
 	} {
-		if v := rawSpec.Search(path...).Data(); reflect.DeepEqual(expectedValue, memz.Ternary(memz.IsAnyNil(v), "", v)) {
+		if v := rawSpec.Search(m.path...).Data(); !reflect.DeepEqual(m.expectedValue, memz.Ternary(memz.IsAnyNil(v), "", v)) {
 			return errorz.Errorf("malformed type raw patch: unexpected value for path: %v: expected '%v', got '%v'",
-				jsonz.MustMarshalString(path),
-				jsonz.MustMarshalString(propertyFix.ExpectedFields.PrimitiveType),
+				jsonz.MustMarshalString(m.path),
+				jsonz.MustMarshalString(p.ExpectedFields.PrimitiveType),
 				jsonz.MustMarshalString(v))
 		}
-	}
 
-	for fixedValue, path := range map[string][]string{
-		propertyFix.FixedFields.PrimitiveType:     append(memz.ShallowCopySlice(basePath), "PrimitiveType"),
-		propertyFix.FixedFields.Type:              append(memz.ShallowCopySlice(basePath), "Type"),
-		propertyFix.FixedFields.PrimitiveItemType: append(memz.ShallowCopySlice(basePath), "PrimitiveItemType"),
-		propertyFix.FixedFields.ItemType:          append(memz.ShallowCopySlice(basePath), "ItemType"),
-	} {
-		_, err := rawSpec.Set(fixedValue, path...)
-		return errorz.MaybeWrap(err)
+		if _, err := rawSpec.Set(m.fixedValue, m.path...); err != nil {
+			return errorz.MaybeWrap(err)
+		}
 	}
 
 	return nil
@@ -227,7 +227,7 @@ func (p *SpecPatchDeleteType) Apply(ic *SpecIssueCollector, s *Spec) {
 // TypePatchDeleteAttribute implements a category of type patches.
 type TypePatchDeleteAttribute struct {
 	AttributeName  string
-	ExpectedFields *TypeRelatedFields
+	ExpectedFields *PropertyOrAttributeTypeFields
 }
 
 // Apply implements the TypePatch interface.
