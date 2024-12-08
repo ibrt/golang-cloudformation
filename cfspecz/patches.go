@@ -217,6 +217,23 @@ func NewDefaultPatchManager() *PatchManager {
 				ItemType:          "",
 			},
 		}).
+		// References invalid, deleted type "AWS::SageMaker::EndpointConfig.ClarifyHeader", fallback to List(String) (as documented).
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::SageMaker::EndpointConfig.ClarifyInferenceConfig",
+			PropertyName: "LabelHeaders",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "ClarifyHeader",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "String",
+				ItemType:          "",
+			},
+		}).
 		// Special treatment for "Tag" because it is the only structured type shared across resources.
 		// It is also the only structured type that does not have a "." in its name.
 		RegisterSpecPatch(&SpecPatchDeleteType{
