@@ -14,8 +14,26 @@ func NewDefaultPatchManager() *PatchManager {
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::CloudWatch::AnomalyDetector.MetricDataQueries",
 		}).
+		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
 			TypeName: "AWS::CloudWatch::InsightRule.Tags",
+		}).
+		// References invalid, deleted type "AWS::CloudWatch::InsightRule.Tags", fallback to List(Tag) (as documented)..
+		RegisterRawPatch(&RawPatchFixPropertyType{
+			TypeName:     "AWS::CloudWatch::InsightRule",
+			PropertyName: "Tags",
+			ExpectedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "Tags",
+				PrimitiveItemType: "",
+				ItemType:          "",
+			},
+			FixedFields: &PropertyOrAttributeTypeFields{
+				PrimitiveType:     "",
+				Type:              "List",
+				PrimitiveItemType: "",
+				ItemType:          "Tag",
+			},
 		}).
 		// Invalid type (referenced).
 		RegisterRawPatch(&RawPatchDeleteType{
