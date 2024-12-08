@@ -40,10 +40,8 @@ func NewSpecFromBuffer(buf []byte, pm *PatchManager) (*Spec, error) {
 		return nil, errorz.Wrap(err)
 	}
 
-	buf = rawSpec.Bytes()
-
-	d = json.NewDecoder(bytes.NewReader(buf))
-	//d.DisallowUnknownFields()
+	d = json.NewDecoder(bytes.NewReader(rawSpec.EncodeJSON()))
+	d.DisallowUnknownFields()
 	d.UseNumber()
 
 	var spec *Spec

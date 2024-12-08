@@ -83,5 +83,4 @@ func NewDefaultPatchManager() *PatchManager {
 				ItemType:          "",
 			},
 		})
-
 }
