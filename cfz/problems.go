@@ -61,17 +61,17 @@ func NewProblemsCollector() *ProblemsCollector {
 }
 
 // Collect collects a problem.
-func (c *ProblemsCollector) Collect(sc ProblemLocation, format string, a ...any) *ProblemsCollector {
-	problems := c.problemsByLocation[sc]
+func (c *ProblemsCollector) Collect(pl ProblemLocation, format string, a ...any) *ProblemsCollector {
+	problems := c.problemsByLocation[pl]
 	problems = append(problems, fmt.Sprintf(format, a...))
-	c.problemsByLocation[sc] = problems
+	c.problemsByLocation[pl] = problems
 	return c
 }
 
 // MaybeCollect collects a problem if "cond" is true.
-func (c *ProblemsCollector) MaybeCollect(sc ProblemLocation, cond bool, format string, a ...any) *ProblemsCollector {
+func (c *ProblemsCollector) MaybeCollect(pl ProblemLocation, cond bool, format string, a ...any) *ProblemsCollector {
 	if cond {
-		return c.Collect(sc, format, a...)
+		return c.Collect(pl, format, a...)
 	}
 	return c
 }

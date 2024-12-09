@@ -44,23 +44,23 @@ func NewSpecFromBuffer(buf []byte, pm *PatchManager) (*Spec, error) {
 	d = json.NewDecoder(bytes.NewReader(rawSpec.EncodeJSON()))
 	d.DisallowUnknownFields()
 
-	var spec *Spec
+	var s *Spec
 
-	if err := d.Decode(&spec); err != nil {
+	if err := d.Decode(&s); err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
-	spec.preProcess()
+	s.preProcess()
 
-	if err := spec.applyPatches(pm); err != nil {
+	if err := s.applyPatches(pm); err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
-	if err := spec.collectProblems(); err != nil {
+	if err := s.collectProblems(); err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
-	return spec, nil
+	return s, nil
 }
 
 // GetDisplayPath implements the ProblemLocation interface.

@@ -1,5 +1,11 @@
 package cfschemaz
 
+import (
+	"fmt"
+
+	"github.com/ibrt/golang-cloudformation/cfz"
+)
+
 // UnprocessedHandlers describes part of the CloudFormation JSON schema for a resource.
 type UnprocessedHandlers struct {
 	Create *UnprocessedHandlersOperation `json:"create,omitempty"`
@@ -65,6 +71,10 @@ type UnprocessedStructuredType struct {
 	UniqueItems          *bool                                 `json:"uniqueItems,omitempty"`
 }
 
+func (ust *UnprocessedStructuredType) collectProblems(pc *cfz.ProblemsCollector, plt *cfz.ProblemLocationTracker) {
+	pc.MaybeCollect(plt, ust.Description == "", "missing Description")
+}
+
 // UnprocessedTagging describes part of the CloudFormation JSON schema for a resource.
 type UnprocessedTagging struct {
 	CloudFormationSystemTags bool     `json:"cloudFormationSystemTags,omitempty"`
@@ -103,4 +113,13 @@ type UnprocessedTopLevelResource struct {
 	Tagging                        *UnprocessedTagging                   `json:"tagging,omitempty"`
 	TypeName                       string                                `json:"typeName,omitempty"`
 	WriteOnlyProperties            []string                              `json:"writeOnlyProperties,omitempty"`
+}
+
+func (utlr *UnprocessedTopLevelResource) collectProblems(pc *cfz.ProblemsCollector, plt *cfz.ProblemLocationTracker) {
+	pc.MaybeCollect(plt, utlr.TypeName == "", "missing TypeName")
+	pc.MaybeCollect(plt, utlr.Description == "", "missing Description")
+
+	for typeName, ust := range utlr.Definitions {
+		ust.collectProblems(pc, plt.WithPathElements(fmt.Sprintf("definition[%v]", typeName)))
+	}
 }

@@ -7,6 +7,8 @@ import (
 	"fmt"
 
 	"github.com/ibrt/golang-utils/errorz"
+
+	"github.com/ibrt/golang-cloudformation/cfz"
 )
 
 // Schema describes the CloudFormation JSON schema.
@@ -37,11 +39,14 @@ func NewSchemaFromBuffer(buf []byte) (*Schema, error) {
 		s.UnprocessedTopLevelResourcesByFileName[f.Name] = pr
 	}
 
-	s.preProcess()
+	if err := s.collectProblems(); err != nil {
+		return nil, errorz.Wrap(err)
+	}
+
 	return s, nil
 }
 
-func parseUnprocessedTopLevelResource(f *zip.File) (ps *UnprocessedTopLevelResource, err error) {
+func parseUnprocessedTopLevelResource(f *zip.File) (utlr *UnprocessedTopLevelResource, err error) {
 	fr, err := f.Open()
 	if err != nil {
 		return nil, errorz.Wrap(err, fmt.Errorf(f.Name))
@@ -56,19 +61,20 @@ func parseUnprocessedTopLevelResource(f *zip.File) (ps *UnprocessedTopLevelResou
 	d := json.NewDecoder(fr)
 	d.DisallowUnknownFields()
 
-	if err := d.Decode(&ps); err != nil {
+	if err := d.Decode(&utlr); err != nil {
 		return nil, errorz.Wrap(err, fmt.Errorf(f.Name))
 	}
 
-	return ps, nil
+	return utlr, nil
 }
 
-func (s *Schema) preProcess() {
-	for _, ur := range s.UnprocessedTopLevelResourcesByFileName {
-		s.ResourceTypes[ur.TypeName] = &Type{
-			IsTopLevelResourceType: true,
-			Name:                   ur.TypeName,
-			Description:            ur.Description,
-		}
+func (s *Schema) collectProblems() error {
+	pc := cfz.NewProblemsCollector()
+	plt := cfz.NewProblemLocationTracker("schema")
+
+	for fileName, utlr := range s.UnprocessedTopLevelResourcesByFileName {
+		utlr.collectProblems(pc, plt.WithPathElements(fmt.Sprintf("topLevelResource[%v]", fileName)))
 	}
+
+	return errorz.MaybeWrap(pc.ToError())
 }
