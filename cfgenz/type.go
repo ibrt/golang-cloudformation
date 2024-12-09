@@ -17,11 +17,11 @@ type GeneratorType struct {
 	Attributes map[string]*GeneratorAttribute
 	Properties map[string]*GeneratorProperty
 
-	spec *GeneratorSpec
+	spec *Generator
 	t    *cfspecz.Type
 }
 
-func newGeneratorType(gs *GeneratorSpec, t *cfspecz.Type) *GeneratorType {
+func newGeneratorType(gs *Generator, t *cfspecz.Type) *GeneratorType {
 	gt := &GeneratorType{
 		spec: gs,
 		t:    t,

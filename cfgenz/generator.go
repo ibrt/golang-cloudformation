@@ -11,6 +11,7 @@ import (
 	"github.com/ibrt/golang-utils/errorz"
 	"github.com/ibrt/golang-utils/memz"
 
+	"github.com/ibrt/golang-cloudformation/cfschemaz"
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 	"github.com/ibrt/golang-cloudformation/cfz"
 )
@@ -55,30 +56,32 @@ func NewDefaultGeneratorSpecOptions() *GeneratorSpecOptions {
 	}
 }
 
-// GeneratorSpec is a processed version of the CloudFormation spec ready to be generated.
-type GeneratorSpec struct {
+// Generator combines spec and JSON schema to generate a CloudFormation library.
+type Generator struct {
 	TopLevelResourceTypes map[string]*GeneratorType
 	StructuredTypes       map[string]*GeneratorType
 
-	o *GeneratorSpecOptions
-	s *cfspecz.Spec
+	o      *GeneratorSpecOptions
+	spec   *cfspecz.Spec
+	schema *cfschemaz.Schema
 }
 
 // NewGeneratorSpec initializes a new generator spec.
-func NewGeneratorSpec(o *GeneratorSpecOptions, s *cfspecz.Spec) *GeneratorSpec {
-	gs := &GeneratorSpec{
-		o: o,
-		s: s,
+func NewGeneratorSpec(o *GeneratorSpecOptions, spec *cfspecz.Spec, schema *cfschemaz.Schema) *Generator {
+	gs := &Generator{
+		o:      o,
+		spec:   spec,
+		schema: schema,
 	}
 
 	gs.TopLevelResourceTypes = memz.TransformMapValues(
-		s.ResourceTypes,
+		spec.ResourceTypes,
 		func(_ string, t *cfspecz.Type) *GeneratorType {
 			return newGeneratorType(gs, t)
 		})
 
 	gs.StructuredTypes = memz.TransformMapValues(
-		s.PropertyTypes,
+		spec.PropertyTypes,
 		func(_ string, t *cfspecz.Type) *GeneratorType {
 			return newGeneratorType(gs, t)
 		})
@@ -87,12 +90,12 @@ func NewGeneratorSpec(o *GeneratorSpecOptions, s *cfspecz.Spec) *GeneratorSpec {
 }
 
 // ResourceSpecificationVersion returns the CloudFormation resource specification version for this spec.
-func (gs *GeneratorSpec) ResourceSpecificationVersion() string {
-	return gs.s.ResourceSpecificationVersion
+func (gs *Generator) ResourceSpecificationVersion() string {
+	return gs.spec.ResourceSpecificationVersion
 }
 
 // Generate applies all the templates and writes the results out to disk.
-func (gs *GeneratorSpec) Generate(outDirPath string) error {
+func (gs *Generator) Generate(outDirPath string) error {
 	if err := os.RemoveAll(outDirPath); err != nil {
 		return errorz.Wrap(err)
 	}
@@ -112,7 +115,7 @@ func (gs *GeneratorSpec) Generate(outDirPath string) error {
 	return nil
 }
 
-func (gs *GeneratorSpec) makeMustLookupType(gt *GeneratorType, sc cfz.ProblemLocation) func(string) *GeneratorType {
+func (gs *Generator) makeMustLookupType(gt *GeneratorType, sc cfz.ProblemLocation) func(string) *GeneratorType {
 	return func(unqualifiedStructuredTypeName string) *GeneratorType {
 		t := gs.StructuredTypes[gt.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
 
@@ -124,7 +127,7 @@ func (gs *GeneratorSpec) makeMustLookupType(gt *GeneratorType, sc cfz.ProblemLoc
 	}
 }
 
-func (gs *GeneratorSpec) getPrimitiveGoType(ic *importsCollector, primitiveType string) string {
+func (gs *Generator) getPrimitiveGoType(ic *importsCollector, primitiveType string) string {
 	switch primitiveType {
 	case "Boolean":
 		return "bool"

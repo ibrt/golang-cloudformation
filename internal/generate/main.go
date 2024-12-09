@@ -9,7 +9,6 @@ import (
 	"github.com/ibrt/golang-utils/filez"
 	"github.com/ibrt/golang-utils/ioz"
 
-	"github.com/ibrt/golang-cloudformation/cfgenz"
 	"github.com/ibrt/golang-cloudformation/cfschemaz"
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
@@ -38,10 +37,10 @@ func main() {
 	filez.MustWriteFile(specFilePath, 0777, 0666, ioz.MustReadAllAndClose(resp.Body))
 
 	fmt.Println("Parsing and validating CloudFormation spec...")
-	s, err := cfspecz.NewSpecFromBuffer(filez.MustReadFile(specFilePath), cfspecz.NewDefaultPatchManager())
+	_, err = cfspecz.NewSpecFromBuffer(filez.MustReadFile(specFilePath), cfspecz.NewDefaultPatchManager())
 	errorz.MaybeMustWrap(err)
 
-	_ = cfgenz.NewGeneratorSpec(cfgenz.NewDefaultGeneratorSpecOptions(), s)
+	// _ = cfgenz.NewGeneratorSpec(cfgenz.NewDefaultGeneratorSpecOptions(), s)
 	//errorz.MaybeMustWrap(gs.Generate(filez.MustAbs(filepath.Join("cfz", "gen"))))
 
 	fmt.Println("Downloading CloudFormation schema...")

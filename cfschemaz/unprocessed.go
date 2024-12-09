@@ -72,7 +72,7 @@ type UnprocessedStructuredType struct {
 }
 
 func (ust *UnprocessedStructuredType) collectProblems(pc *cfz.ProblemsCollector, plt *cfz.ProblemLocationTracker) {
-	pc.MaybeCollect(plt, ust.Description == "", "missing Description")
+	// TODO
 }
 
 // UnprocessedTagging describes part of the CloudFormation JSON schema for a resource.
