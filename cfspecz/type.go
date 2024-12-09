@@ -33,7 +33,7 @@ func (t *Type) GetRelatedStructuredTypeName(unqualifiedStructuredTypeName string
 	return fmt.Sprintf("%s.%s", t.GetRelatedTopLevelResourceTypeName(), unqualifiedStructuredTypeName)
 }
 
-// GetDisplayPath implements the SpecContext interface.
+// GetDisplayPath implements the ProblemLocation interface.
 func (t *Type) GetDisplayPath() string {
 	return fmt.Sprintf("%v/%v[%v]",
 		specDisplayPath,
@@ -54,33 +54,33 @@ func (t *Type) preProcess(spec *Spec, isTopLevelResourceType bool, name string) 
 	}
 }
 
-func (t *Type) applyPatches(ic *SpecIssueCollector, pm *PatchManager) {
-	pm.applyTypePatches(ic, t)
+func (t *Type) applyPatches(pc *ProblemsCollector, pm *PatchManager) {
+	pm.applyTypePatches(pc, t)
 }
 
-func (t *Type) collectIssues(ic *SpecIssueCollector) {
-	ic.MaybeCollectIssue(t, t.Documentation == "", "missing Documentation")
+func (t *Type) collectProblems(pc *ProblemsCollector) {
+	pc.MaybeCollect(t, t.Documentation == "", "missing Documentation")
 
 	if t.Name == "" {
-		ic.CollectIssue(t, "missing Name")
+		pc.Collect(t, "missing Name")
 		return
 	}
 
 	if t.IsTopLevelResourceType && strings.Contains(t.Name, ".") {
-		ic.CollectIssue(t, "unexpected '.' in Name")
+		pc.Collect(t, "unexpected '.' in Name")
 		return
 	}
 
 	if !t.IsTopLevelResourceType && !strings.Contains(t.Name, ".") {
-		ic.CollectIssue(t, "missing '.' in Name")
+		pc.Collect(t, "missing '.' in Name")
 		return
 	}
 
 	for _, attribute := range t.Attributes {
-		attribute.collectIssues(ic)
+		attribute.collectProblems(pc)
 	}
 
 	for _, property := range t.Properties {
-		property.collectIssues(ic)
+		property.collectProblems(pc)
 	}
 }

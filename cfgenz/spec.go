@@ -111,7 +111,7 @@ func (gs *GeneratorSpec) Generate(outDirPath string) error {
 	return nil
 }
 
-func (gs *GeneratorSpec) makeMustLookupType(gt *GeneratorType, sc cfspecz.SpecContext) func(string) *GeneratorType {
+func (gs *GeneratorSpec) makeMustLookupType(gt *GeneratorType, sc cfspecz.ProblemLocation) func(string) *GeneratorType {
 	return func(unqualifiedStructuredTypeName string) *GeneratorType {
 		t := gs.StructuredTypes[gt.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
 

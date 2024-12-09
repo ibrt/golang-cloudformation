@@ -17,7 +17,7 @@ type Attribute struct {
 	displayPath string
 }
 
-// GetDisplayPath implements the SpecContext interface.
+// GetDisplayPath implements the ProblemLocation interface.
 func (a *Attribute) GetDisplayPath() string {
 	return a.displayPath
 }
@@ -37,42 +37,42 @@ func (a *Attribute) preProcess(spec *Spec, parent *Type, name string) {
 	a.displayPath = fmt.Sprintf("%v/attribute[%v]", parent.GetDisplayPath(), a.Name)
 }
 
-func (a *Attribute) collectIssues(ic *SpecIssueCollector) {
+func (a *Attribute) collectProblems(pc *ProblemsCollector) {
 	if a.PrimitiveType == "" && a.Type == "" {
-		ic.CollectIssue(a, "missing both PrimitiveType and Type")
+		pc.Collect(a, "missing both PrimitiveType and Type")
 		return
 	}
 
 	if a.PrimitiveType != "" {
-		ic.MaybeCollectIssue(a, a.Type != "", "unexpected Type")
-		ic.MaybeCollectIssue(a, a.PrimitiveItemType != "", "unexpected PrimitiveItemType")
-		ic.MaybeCollectIssue(a, a.ItemType != "", "unexpected ItemType")
-		ic.MaybeCollectIssue(a, !IsValidPrimitiveType(a.PrimitiveType), "invalid PrimitiveType: %v", a.PrimitiveType)
-		ic.MaybeCollectIssue(a, a.PrimitiveType == "Json", "unsupported PrimitiveType: 'Json'")
+		pc.MaybeCollect(a, a.Type != "", "unexpected Type")
+		pc.MaybeCollect(a, a.PrimitiveItemType != "", "unexpected PrimitiveItemType")
+		pc.MaybeCollect(a, a.ItemType != "", "unexpected ItemType")
+		pc.MaybeCollect(a, !IsValidPrimitiveType(a.PrimitiveType), "invalid PrimitiveType: %v", a.PrimitiveType)
+		pc.MaybeCollect(a, a.PrimitiveType == "Json", "unsupported PrimitiveType: 'Json'")
 
 		return
 	}
 
 	if a.Type == "List" {
 		if a.PrimitiveItemType == "" && a.ItemType == "" {
-			ic.CollectIssue(a, "missing both PrimitiveItemType and ItemType")
+			pc.Collect(a, "missing both PrimitiveItemType and ItemType")
 			return
 		}
 
 		if a.PrimitiveItemType != "" {
-			ic.MaybeCollectIssue(a, a.ItemType != "", "unexpected ItemType")
-			ic.MaybeCollectIssue(a, !IsValidPrimitiveType(a.PrimitiveItemType), "invalid PrimitiveItemType: %v", a.PrimitiveItemType)
-			ic.MaybeCollectIssue(a, a.PrimitiveItemType == "Json", "unsupported PrimitiveItemType: 'Json'")
+			pc.MaybeCollect(a, a.ItemType != "", "unexpected ItemType")
+			pc.MaybeCollect(a, !IsValidPrimitiveType(a.PrimitiveItemType), "invalid PrimitiveItemType: %v", a.PrimitiveItemType)
+			pc.MaybeCollect(a, a.PrimitiveItemType == "Json", "unsupported PrimitiveItemType: 'Json'")
 
 			return
 		}
 
 		if a.ItemType == "List" || a.ItemType == "Map" {
-			ic.CollectIssue(a, "unsupported ItemType: '%v'", a.ItemType)
+			pc.Collect(a, "unsupported ItemType: '%v'", a.ItemType)
 			return
 		}
 
-		ic.MaybeCollectIssue(a,
+		pc.MaybeCollect(a,
 			a.ItemType != "Tag" && a.MaybeLookupType(a.ItemType) == nil,
 			"unknown ItemType: '%v'", a.ItemType)
 
@@ -80,14 +80,14 @@ func (a *Attribute) collectIssues(ic *SpecIssueCollector) {
 	}
 
 	if a.Type == "Map" {
-		ic.CollectIssue(a, "unsupported Type: 'Map'")
+		pc.Collect(a, "unsupported Type: 'Map'")
 		return
 	}
 
-	ic.MaybeCollectIssue(a, a.PrimitiveItemType != "", "unexpected PrimitiveItemType")
-	ic.MaybeCollectIssue(a, a.ItemType != "", "unexpected ItemType")
+	pc.MaybeCollect(a, a.PrimitiveItemType != "", "unexpected PrimitiveItemType")
+	pc.MaybeCollect(a, a.ItemType != "", "unexpected ItemType")
 
-	ic.MaybeCollectIssue(a,
+	pc.MaybeCollect(a,
 		a.Type != "Tag" && a.MaybeLookupType(a.Type) == nil,
 		"unknown Type: '%v'", a.Type)
 }

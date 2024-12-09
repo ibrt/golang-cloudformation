@@ -12,11 +12,6 @@ const (
 	specDisplayPath = "spec"
 )
 
-// SpecContext describes a place in the spec (i.e. spec, type, property, or attribute).
-type SpecContext interface {
-	GetDisplayPath() string
-}
-
 // Spec describes the CloudFormation spec.
 type Spec struct {
 	ResourceSpecificationVersion string
@@ -24,7 +19,7 @@ type Spec struct {
 	PropertyTypes                map[string]*Type
 }
 
-// NewSpecFromBuffer parses, patches (using the given spec patch manager), and validates a CloudFormation spec from the
+// NewSpecFromBuffer parses, patches (using the given patch manager), and validates a CloudFormation spec from the
 // given buffer (i.e. "CloudFormationResourceSpecification.json" file).
 func NewSpecFromBuffer(buf []byte, pm *PatchManager) (*Spec, error) {
 	d := json.NewDecoder(bytes.NewReader(buf))
@@ -56,14 +51,14 @@ func NewSpecFromBuffer(buf []byte, pm *PatchManager) (*Spec, error) {
 		return nil, errorz.Wrap(err)
 	}
 
-	if err := spec.collectIssues(); err != nil {
+	if err := spec.collectProblems(); err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
 	return spec, nil
 }
 
-// GetDisplayPath implements the SpecContext interface.
+// GetDisplayPath implements the ProblemLocation interface.
 func (*Spec) GetDisplayPath() string {
 	return specDisplayPath
 }
@@ -79,39 +74,39 @@ func (s *Spec) preProcess() {
 }
 
 func (s *Spec) applyPatches(pm *PatchManager) error {
-	ic := NewSpecIssueCollector()
-	pm.applySpecPatches(ic, s)
+	pc := NewProblemsCollector()
+	pm.applySpecPatches(pc, s)
 
 	for _, resourceType := range s.ResourceTypes {
-		resourceType.applyPatches(ic, pm)
+		resourceType.applyPatches(pc, pm)
 	}
 
 	for _, propertyType := range s.PropertyTypes {
-		propertyType.applyPatches(ic, pm)
+		propertyType.applyPatches(pc, pm)
 	}
 
-	return ic.MaybeToError()
+	return errorz.MaybeWrap(pc.ToError())
 }
 
-func (s *Spec) collectIssues() error {
-	ic := NewSpecIssueCollector()
+func (s *Spec) collectProblems() error {
+	pc := NewProblemsCollector()
 
 	if s.ResourceSpecificationVersion == "" {
-		ic.CollectIssue(s, "missing ResourceSpecificationVersion")
-		return ic.MaybeToError()
+		pc.Collect(s, "missing ResourceSpecificationVersion")
+		return pc.ToError()
 	}
 
 	for _, resourceType := range s.ResourceTypes {
-		resourceType.collectIssues(ic)
+		resourceType.collectProblems(pc)
 	}
 
 	for _, propertyType := range s.PropertyTypes {
-		propertyType.collectIssues(ic)
+		propertyType.collectProblems(pc)
 	}
 
 	for _, propertyType := range s.PropertyTypes {
-		ic.MaybeCollectIssue(propertyType, !propertyType.IsReferenced, "unreferenced structured type")
+		pc.MaybeCollect(propertyType, !propertyType.IsReferenced, "unreferenced structured type")
 	}
 
-	return ic.MaybeToError()
+	return errorz.MaybeWrap(pc.ToError())
 }
