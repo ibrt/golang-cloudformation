@@ -40,6 +40,12 @@ func (gp *GeneratorProperty) GoGenericType() string {
 	return gp.goGenericType(nil)
 }
 
+// GoUnqualifiedOuterType returns the Go unqualified outer type for this property
+// (i.e. Expression, ExpressionSlice, or ExpressionMap).
+func (gp *GeneratorProperty) GoUnqualifiedOuterType() string {
+	return gp.goUnqualifiedOuterType()
+}
+
 // DocumentationURL returns the documentation URL for this property.
 func (gp *GeneratorProperty) DocumentationURL() string {
 	return gp.p.Documentation
@@ -50,19 +56,30 @@ func (gp *GeneratorProperty) Name() string {
 	return gp.p.Name
 }
 
+// Required returns true if the property is required, false otherwise.
+func (gp *GeneratorProperty) Required() bool {
+	return gp.p.Required
+}
+
+// UpdateType returns the update type of the property ("Mutable", "Immutable", or "Conditional").
+func (gp *GeneratorProperty) UpdateType() string {
+	return gp.p.UpdateType
+}
+
 func (gp *GeneratorProperty) goType(ic *importsCollector) string {
-	if gp.p.Type == "List" {
-		return gp.parent.spec.o.getGoSupportType(ic,
-			fmt.Sprintf("ExpressionSlice[%v]", gp.goGenericType(ic)))
-	}
-
-	if gp.p.Type == "Map" {
-		return gp.parent.spec.o.getGoSupportType(ic,
-			fmt.Sprintf("ExpressionMap[%v]", gp.goGenericType(ic)))
-	}
-
 	return gp.parent.spec.o.getGoSupportType(ic,
-		fmt.Sprintf("Expression[%v]", gp.goGenericType(ic)))
+		fmt.Sprintf("%v[%v]", gp.goUnqualifiedOuterType(), gp.goGenericType(ic)))
+}
+
+func (gp *GeneratorProperty) goUnqualifiedOuterType() string {
+	if gp.p.Type == "List" {
+		return "ExpressionSlice"
+	}
+	if gp.p.Type == "Map" {
+		return "ExpressionMap"
+	}
+
+	return "Expression"
 }
 
 func (gp *GeneratorProperty) goGenericType(ic *importsCollector) string {
