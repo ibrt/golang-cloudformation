@@ -5,53 +5,57 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 
 	"github.com/ibrt/golang-utils/errorz"
 )
 
-// Schema describes the CloudFormation JSON schema.
-type Schema struct {
-	RawSchemas      map[string][]byte
-	ResourceSchemas map[string]*Resource
+// RootSchema describes the CloudFormation JSON schema.
+type RootSchema struct {
+	ParsedSchemasByFileName map[string]*ParsedSchema
 }
 
-// NewSchemaFromBuffer parses and validates a CloudFormation JSON schema from the given buffer
+// NewRootSchemaFromBuffer parses and validates a CloudFormation JSON schema from the given buffer
 // (i.e. "CloudFormationSchema.zip" file).
-func NewSchemaFromBuffer(buf []byte) (*Schema, error) {
+func NewRootSchemaFromBuffer(buf []byte) (*RootSchema, error) {
 	zr, err := zip.NewReader(bytes.NewReader(buf), int64(len(buf)))
 	if err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
-	s := &Schema{
-		RawSchemas:      make(map[string][]byte),
-		ResourceSchemas: make(map[string]*Resource),
+	s := &RootSchema{
+		ParsedSchemasByFileName: make(map[string]*ParsedSchema),
 	}
 
 	for _, f := range zr.File {
-		fr, err := f.Open()
+		pr, err := newParsedSchemaFromFile(f)
 		if err != nil {
 			return nil, errorz.Wrap(err)
 		}
 
-		buf, err := io.ReadAll(fr)
-		if err != nil {
-			return nil, errorz.Wrap(err)
-		}
-
-		d := json.NewDecoder(bytes.NewBuffer(buf))
-		d.DisallowUnknownFields()
-
-		var r *Resource
-
-		if err := d.Decode(&r); err != nil {
-			return nil, errorz.Wrap(err, fmt.Errorf(f.Name))
-		}
-
-		s.RawSchemas[f.Name] = buf
-		s.ResourceSchemas[f.Name] = r
+		s.ParsedSchemasByFileName[f.Name] = pr
 	}
 
 	return s, nil
+}
+
+func newParsedSchemaFromFile(f *zip.File) (ps *ParsedSchema, err error) {
+	fr, err := f.Open()
+	if err != nil {
+		return nil, errorz.Wrap(err, fmt.Errorf(f.Name))
+	}
+
+	defer func() {
+		if cErr := fr.Close(); cErr != nil && err == nil {
+			err = errorz.Wrap(cErr, fmt.Errorf(f.Name))
+		}
+	}()
+
+	d := json.NewDecoder(fr)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&ps); err != nil {
+		return nil, errorz.Wrap(err, fmt.Errorf(f.Name))
+	}
+
+	return ps, nil
 }

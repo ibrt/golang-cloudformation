@@ -52,6 +52,6 @@ func main() {
 	filez.MustWriteFile(schemaFilePath, 0777, 0666, ioz.MustReadAllAndClose(resp.Body))
 
 	fmt.Println("Parsing and validating CloudFormation schema...")
-	_, err = cfschemaz.NewSchemaFromBuffer(filez.MustReadFile(schemaFilePath))
+	_, err = cfschemaz.NewRootSchemaFromBuffer(filez.MustReadFile(schemaFilePath))
 	errorz.MaybeMustWrap(err)
 }
