@@ -88,6 +88,8 @@ type {{ .GoName }} struct {
 
     {{- range $k, $v := .Properties }}
         // {{ $v.Name }} is a property.
+        // Required: {{ $v.Required }}
+        // UpdateType: {{ $v.UpdateType }}
         // See: {{ $v.DocumentationURL }}
         {{ $v.GoName }} {{ $v.GoType }} `json:"{{ $v.Name }},omitempty"`
     {{ end }}
@@ -241,12 +243,8 @@ func ({{ if .IsTopLevelResourceType }}*{{ end }}{{ .GoName }}) GetType() string 
     {{ range $k, $v := .Attributes }}
         // GetConventionalOutputAtt__{{ $v.GoName }} returns a conventionally configured output for an attribute of this resource.
         // Attribute: {{ $v.Name }}
-        func (t *{{ $.GoName }}) GetConventionalOutputAtt__{{ $v.GoName }}(isExported bool) {{ $.GoSupportBasePackage }}.Output {
-            o := {{ $.GoSupportBasePackage }}.{{ $v.SupportOutputFunctionName }}(t.GetResourceLogicalName()+"Att{{ $v.NameForLogicalNames }}", t.{{ $v.SupportGetAttFunctionName }}__{{ $v.GoName }}())
-            if isExported {
-                o.SetConventionalExportName()
-            }
-            return o
+        func (t *{{ $.GoName }}) GetConventionalOutputAtt__{{ $v.GoName }}() *{{ $.GoSupportBasePackage }}.{{ $v.SupportOutputFunctionName }}Impl[{{ $v.GoGenericType }}] {
+            return {{ $.GoSupportBasePackage }}.New{{ $v.SupportOutputFunctionName }}(t.GetResourceLogicalName()+"Att{{ $v.NameForLogicalNames }}", t.{{ $v.SupportGetAttFunctionName }}__{{ $v.GoName }}())
         }
     {{ end }}
 

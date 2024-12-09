@@ -90,6 +90,14 @@ func (o *OutputImpl[T]) SetConventionalExportName() *OutputImpl[T] {
 	return o
 }
 
+// MaybeSetConventionalExportName is like SetConventionalExportName but only applied if "isExported" is true.
+func (o *OutputImpl[T]) MaybeSetConventionalExportName(isExported bool) *OutputImpl[T] {
+	if isExported {
+		o.SetConventionalExportName()
+	}
+	return o
+}
+
 // MarshalJSON implements the Output interface.
 func (o *OutputImpl[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rawOutputImpl{
@@ -156,6 +164,14 @@ func (o *OutputSliceImpl[T]) SetConventionalExportName() *OutputSliceImpl[T] {
 	return o
 }
 
+// MaybeSetConventionalExportName is like SetConventionalExportName but only applied if "isExported" is true.
+func (o *OutputSliceImpl[T]) MaybeSetConventionalExportName(isExported bool) *OutputSliceImpl[T] {
+	if isExported {
+		o.SetConventionalExportName()
+	}
+	return o
+}
+
 // MarshalJSON marshals the output.
 func (o *OutputSliceImpl[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rawOutputImpl{
@@ -219,6 +235,14 @@ func (o *OutputMapImpl[T]) SetVExportName(exportName string) *OutputMapImpl[T] {
 // SetConventionalExportName sets the export name to "${AWS::StackName}-<current value of LogicalName>".
 func (o *OutputMapImpl[T]) SetConventionalExportName() *OutputMapImpl[T] {
 	o.ExportName = Sub(fmt.Sprintf("${AWS::StackName}-%v", o.LogicalName))
+	return o
+}
+
+// MaybeSetConventionalExportName is like SetConventionalExportName but only applied if "isExported" is true.
+func (o *OutputMapImpl[T]) MaybeSetConventionalExportName(isExported bool) *OutputMapImpl[T] {
+	if isExported {
+		o.SetConventionalExportName()
+	}
 	return o
 }
 

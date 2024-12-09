@@ -56,6 +56,16 @@ func (gp *GeneratorProperty) Name() string {
 	return gp.p.Name
 }
 
+// Required returns true if the property is required, false otherwise.
+func (gp *GeneratorProperty) Required() bool {
+	return gp.p.Required
+}
+
+// UpdateType returns the update type of the property ("Mutable", "Immutable", or "Conditional").
+func (gp *GeneratorProperty) UpdateType() string {
+	return gp.p.UpdateType
+}
+
 func (gp *GeneratorProperty) goType(ic *importsCollector) string {
 	return gp.parent.spec.o.getGoSupportType(ic,
 		fmt.Sprintf("%v[%v]", gp.goUnqualifiedOuterType(), gp.goGenericType(ic)))
