@@ -242,7 +242,7 @@ func ({{ if .IsTopLevelResourceType }}*{{ end }}{{ .GoName }}) GetType() string 
         // GetConventionalOutputAtt__{{ $v.GoName }} returns a conventionally configured output for an attribute of this resource.
         // Attribute: {{ $v.Name }}
         func (t *{{ $.GoName }}) GetConventionalOutputAtt__{{ $v.GoName }}(isExported bool) {{ $.GoSupportBasePackage }}.Output {
-            o := {{ $.GoSupportBasePackage }}.NewOutput(t.GetResourceLogicalName()+"Att{{ $v.NameForLogicalNames }}", t.{{ $v.SupportGetAttFunctionName }}__{{ $v.GoName }}())
+            o := {{ $.GoSupportBasePackage }}.{{ $v.SupportOutputFunctionName }}(t.GetResourceLogicalName()+"Att{{ $v.NameForLogicalNames }}", t.{{ $v.SupportGetAttFunctionName }}__{{ $v.GoName }}())
             if isExported {
                 o.SetConventionalExportName()
             }

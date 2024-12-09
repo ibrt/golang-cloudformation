@@ -47,6 +47,11 @@ func (ga *GeneratorAttribute) SupportGetAttFunctionName() string {
 	return memz.Ternary(ga.a.Type == "List", "GetAttSlice", "GetAtt")
 }
 
+// SupportOutputFunctionName returns the NewOutput* support function to use for this attribute.
+func (ga *GeneratorAttribute) SupportOutputFunctionName() string {
+	return memz.Ternary(ga.a.Type == "List", "NewOutputSlice", "NewOutput")
+}
+
 // NameForLogicalNames returns the name for this attribute modified so that it can be embedded in logical names.
 func (ga *GeneratorAttribute) NameForLogicalNames() string {
 	return strings.ReplaceAll(ga.a.Name, ".", "")

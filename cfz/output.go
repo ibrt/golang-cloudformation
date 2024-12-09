@@ -7,27 +7,25 @@ import (
 	"github.com/ibrt/golang-utils/memz"
 )
 
-// Output describes a CloudFormation template output.
-type Output interface {
+// OutputPartialLogicalName describes a subset of a CloudFormation output.
+type OutputPartialLogicalName interface {
 	GetOutputLogicalName() string
+}
+
+// Output describes a CloudFormation output.
+type Output interface {
+	OutputPartialLogicalName
 	json.Marshaler
 }
 
 var (
-	_ Output = (*OutputImpl[any])(nil)
+	_ OutputPartialLogicalName = (*OutputImpl[any])(nil)
+	_ Output                   = (*OutputImpl[any])(nil)
 )
-
-// OutputImpl is a provided implementation of Output.
-type OutputImpl[T any] struct {
-	LogicalName string             `json:"-"`
-	Description string             `json:"-"`
-	Value       T                  `json:"-"`
-	ExportName  Expression[string] `json:"-"`
-}
 
 type outputImpl[T any] struct {
 	Description string            `json:"Description,omitempty"`
-	Value       T                 `json:"Value,omitempty"`
+	Value       Expression[T]     `json:"Value,omitempty"`
 	Export      *outputImplExport `json:"Export,omitempty"`
 }
 
@@ -35,8 +33,16 @@ type outputImplExport struct {
 	Name Expression[string] `json:"Name,omitempty"`
 }
 
+// OutputImpl is a provided implementation for an output.
+type OutputImpl[T any] struct {
+	LogicalName string             `json:"-"`
+	Description string             `json:"-"`
+	Value       Expression[T]      `json:"-"`
+	ExportName  Expression[string] `json:"-"`
+}
+
 // NewOutput initializes a new output.
-func NewOutput[T any](logicalName string, value T) *OutputImpl[T] {
+func NewOutput[T any](logicalName string, value Expression[T]) *OutputImpl[T] {
 	return &OutputImpl[T]{
 		LogicalName: logicalName,
 		Value:       value,
@@ -61,7 +67,7 @@ func (o *OutputImpl[T]) SetDescription(description string) *OutputImpl[T] {
 }
 
 // SetValue sets the value.
-func (o *OutputImpl[T]) SetValue(value T) *OutputImpl[T] {
+func (o *OutputImpl[T]) SetValue(value Expression[T]) *OutputImpl[T] {
 	o.Value = value
 	return o
 }
