@@ -2,11 +2,40 @@ package cfspecz
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/ibrt/golang-utils/memz"
 )
 
 // ProblemLocation describes a location in the spec (i.e. spec, type, property, or attribute).
 type ProblemLocation interface {
 	GetDisplayPath() string
+}
+
+// ProblemLocationTracker helps to build a problem location while descending the call stack.
+type ProblemLocationTracker struct {
+	pathElements []string
+}
+
+// NewProblemLocationTracker initializes a new problem location tracker.
+func NewProblemLocationTracker(rootPath string) *ProblemLocationTracker {
+	return &ProblemLocationTracker{
+		pathElements: []string{
+			rootPath,
+		},
+	}
+}
+
+// WithPathElements returns a clone of the problem location tracker that includes the given path elements.
+func (t *ProblemLocationTracker) WithPathElements(pathElements ...string) *ProblemLocationTracker {
+	return &ProblemLocationTracker{
+		pathElements: append(memz.ShallowCopySlice(t.pathElements), pathElements...),
+	}
+}
+
+// GetDisplayPath implements the ProblemLocation interface.
+func (t *ProblemLocationTracker) GetDisplayPath() string {
+	return strings.Join(t.pathElements, "/")
 }
 
 var (

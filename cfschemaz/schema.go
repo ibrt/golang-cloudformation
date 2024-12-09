@@ -9,36 +9,39 @@ import (
 	"github.com/ibrt/golang-utils/errorz"
 )
 
-// RootSchema describes the CloudFormation JSON schema.
-type RootSchema struct {
-	ParsedSchemasByFileName map[string]*ParsedSchema
+// Schema describes the CloudFormation JSON schema.
+type Schema struct {
+	UnprocessedTopLevelResourcesByFileName map[string]*UnprocessedTopLevelResource
+	ResourceTypes                          map[string]*Type
+	StructuredTypes                        map[string]*Type
 }
 
-// NewRootSchemaFromBuffer parses and validates a CloudFormation JSON schema from the given buffer
+// NewSchemaFromBuffer parses and validates a CloudFormation JSON schema from the given buffer
 // (i.e. "CloudFormationSchema.zip" file).
-func NewRootSchemaFromBuffer(buf []byte) (*RootSchema, error) {
+func NewSchemaFromBuffer(buf []byte) (*Schema, error) {
 	zr, err := zip.NewReader(bytes.NewReader(buf), int64(len(buf)))
 	if err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
-	s := &RootSchema{
-		ParsedSchemasByFileName: make(map[string]*ParsedSchema),
+	s := &Schema{
+		UnprocessedTopLevelResourcesByFileName: make(map[string]*UnprocessedTopLevelResource),
 	}
 
 	for _, f := range zr.File {
-		pr, err := newParsedSchemaFromFile(f)
+		pr, err := parseUnprocessedTopLevelResource(f)
 		if err != nil {
 			return nil, errorz.Wrap(err)
 		}
 
-		s.ParsedSchemasByFileName[f.Name] = pr
+		s.UnprocessedTopLevelResourcesByFileName[f.Name] = pr
 	}
 
+	s.preProcess()
 	return s, nil
 }
 
-func newParsedSchemaFromFile(f *zip.File) (ps *ParsedSchema, err error) {
+func parseUnprocessedTopLevelResource(f *zip.File) (ps *UnprocessedTopLevelResource, err error) {
 	fr, err := f.Open()
 	if err != nil {
 		return nil, errorz.Wrap(err, fmt.Errorf(f.Name))
@@ -58,4 +61,14 @@ func newParsedSchemaFromFile(f *zip.File) (ps *ParsedSchema, err error) {
 	}
 
 	return ps, nil
+}
+
+func (s *Schema) preProcess() {
+	for _, ur := range s.UnprocessedTopLevelResourcesByFileName {
+		s.ResourceTypes[ur.TypeName] = &Type{
+			IsTopLevelResourceType: true,
+			Name:                   ur.TypeName,
+			Description:            ur.Description,
+		}
+	}
 }
