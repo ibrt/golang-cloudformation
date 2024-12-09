@@ -2,6 +2,12 @@ package cfspecz
 
 import (
 	"fmt"
+
+	"github.com/ibrt/golang-cloudformation/cfz"
+)
+
+var (
+	_ cfz.ProblemLocation = (*Property)(nil)
 )
 
 // Attribute describes an attribute of a top-level resource type.
@@ -37,7 +43,7 @@ func (a *Attribute) preProcess(spec *Spec, parent *Type, name string) {
 	a.displayPath = fmt.Sprintf("%v/attribute[%v]", parent.GetDisplayPath(), a.Name)
 }
 
-func (a *Attribute) collectProblems(pc *ProblemsCollector) {
+func (a *Attribute) collectProblems(pc *cfz.ProblemsCollector) {
 	if a.PrimitiveType == "" && a.Type == "" {
 		pc.Collect(a, "missing both PrimitiveType and Type")
 		return

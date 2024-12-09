@@ -2,6 +2,12 @@ package cfspecz
 
 import (
 	"fmt"
+
+	"github.com/ibrt/golang-cloudformation/cfz"
+)
+
+var (
+	_ cfz.ProblemLocation = (*Property)(nil)
 )
 
 // Property describes a property of either a top-level resource or structured type.
@@ -40,7 +46,7 @@ func (p *Property) preProcess(spec *Spec, parent *Type, name string) {
 	p.displayPath = fmt.Sprintf("%v/property[%v]", parent.GetDisplayPath(), p.Name)
 }
 
-func (p *Property) collectProblems(pc *ProblemsCollector) {
+func (p *Property) collectProblems(pc *cfz.ProblemsCollector) {
 	pc.MaybeCollect(p, p.Documentation == "", "missing Documentation")
 
 	if p.PrimitiveType == "" && p.Type == "" {

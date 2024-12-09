@@ -12,6 +12,7 @@ import (
 	"github.com/ibrt/golang-utils/memz"
 
 	"github.com/ibrt/golang-cloudformation/cfspecz"
+	"github.com/ibrt/golang-cloudformation/cfz"
 )
 
 var (
@@ -111,7 +112,7 @@ func (gs *GeneratorSpec) Generate(outDirPath string) error {
 	return nil
 }
 
-func (gs *GeneratorSpec) makeMustLookupType(gt *GeneratorType, sc cfspecz.ProblemLocation) func(string) *GeneratorType {
+func (gs *GeneratorSpec) makeMustLookupType(gt *GeneratorType, sc cfz.ProblemLocation) func(string) *GeneratorType {
 	return func(unqualifiedStructuredTypeName string) *GeneratorType {
 		t := gs.StructuredTypes[gt.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
 

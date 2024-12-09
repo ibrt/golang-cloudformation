@@ -1,4 +1,4 @@
-package cfspecz
+package cfz
 
 import (
 	"fmt"
@@ -37,13 +37,6 @@ func (t *ProblemLocationTracker) WithPathElements(pathElements ...string) *Probl
 func (t *ProblemLocationTracker) GetDisplayPath() string {
 	return strings.Join(t.pathElements, "/")
 }
-
-var (
-	_ ProblemLocation = (*Spec)(nil)
-	_ ProblemLocation = (*Type)(nil)
-	_ ProblemLocation = (*Property)(nil)
-	_ ProblemLocation = (*Attribute)(nil)
-)
 
 // ProblemsFoundError describes a set of problems within a spec.
 type ProblemsFoundError struct {

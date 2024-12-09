@@ -5,6 +5,12 @@ import (
 	"strings"
 
 	"github.com/ibrt/golang-utils/memz"
+
+	"github.com/ibrt/golang-cloudformation/cfz"
+)
+
+var (
+	_ cfz.ProblemLocation = (*Property)(nil)
 )
 
 // Type describes either a top-level resource type or a structured type in the spec.
@@ -54,11 +60,11 @@ func (t *Type) preProcess(spec *Spec, isTopLevelResourceType bool, name string) 
 	}
 }
 
-func (t *Type) applyPatches(pc *ProblemsCollector, pm *PatchManager) {
+func (t *Type) applyPatches(pc *cfz.ProblemsCollector, pm *PatchManager) {
 	pm.applyTypePatches(pc, t)
 }
 
-func (t *Type) collectProblems(pc *ProblemsCollector) {
+func (t *Type) collectProblems(pc *cfz.ProblemsCollector) {
 	pc.MaybeCollect(t, t.Documentation == "", "missing Documentation")
 
 	if t.Name == "" {

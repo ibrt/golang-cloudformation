@@ -9,6 +9,8 @@ import (
 	"github.com/ibrt/golang-utils/errorz"
 	"github.com/ibrt/golang-utils/jsonz"
 	"github.com/ibrt/golang-utils/memz"
+
+	"github.com/ibrt/golang-cloudformation/cfz"
 )
 
 // RawPatch describes a patch applicable to the raw spec (i.e. before parsing into structs).
@@ -26,27 +28,27 @@ func (f RawPatchFunc) Apply(rawSpec *gabs.Container) error {
 
 // SpecPatch describes a patch applicable to a spec.
 type SpecPatch interface {
-	Apply(ic *ProblemsCollector, s *Spec)
+	Apply(ic *cfz.ProblemsCollector, s *Spec)
 }
 
 // SpecPatchFunc is a func shorthand for SpecPatch.
-type SpecPatchFunc func(ic *ProblemsCollector, s *Spec)
+type SpecPatchFunc func(ic *cfz.ProblemsCollector, s *Spec)
 
 // Apply implements the SpecPatch interface.
-func (f SpecPatchFunc) Apply(ic *ProblemsCollector, s *Spec) {
+func (f SpecPatchFunc) Apply(ic *cfz.ProblemsCollector, s *Spec) {
 	f(ic, s)
 }
 
 // TypePatch describes a patch applicable to a type.
 type TypePatch interface {
-	Apply(ic *ProblemsCollector, t *Type)
+	Apply(ic *cfz.ProblemsCollector, t *Type)
 }
 
 // TypePatchFunc is a func shorthand for TypePatch.
-type TypePatchFunc func(ic *ProblemsCollector, t *Type)
+type TypePatchFunc func(ic *cfz.ProblemsCollector, t *Type)
 
 // Apply implements the SpecPatch interface.
-func (f TypePatchFunc) Apply(ic *ProblemsCollector, t *Type) {
+func (f TypePatchFunc) Apply(ic *cfz.ProblemsCollector, t *Type) {
 	f(ic, t)
 }
 
@@ -96,13 +98,13 @@ func (m *PatchManager) applyRawPatches(raw *gabs.Container) error {
 	return nil
 }
 
-func (m *PatchManager) applySpecPatches(ic *ProblemsCollector, s *Spec) {
+func (m *PatchManager) applySpecPatches(ic *cfz.ProblemsCollector, s *Spec) {
 	for _, patch := range m.specPatches {
 		patch.Apply(ic, s)
 	}
 }
 
-func (m *PatchManager) applyTypePatches(ic *ProblemsCollector, t *Type) {
+func (m *PatchManager) applyTypePatches(ic *cfz.ProblemsCollector, t *Type) {
 	for _, patch := range m.typePatches[t.Name] {
 		patch.Apply(ic, t)
 	}
@@ -208,7 +210,7 @@ type SpecPatchDeleteType struct {
 }
 
 // Apply implements the SpecPatch interface.
-func (p *SpecPatchDeleteType) Apply(ic *ProblemsCollector, s *Spec) {
+func (p *SpecPatchDeleteType) Apply(ic *cfz.ProblemsCollector, s *Spec) {
 	if strings.Contains(p.TypeName, ".") || memz.ValNilToZero(p.ForceIsStructuredType) {
 		if _, ok := s.PropertyTypes[p.TypeName]; ok {
 			delete(s.PropertyTypes, p.TypeName)
@@ -231,7 +233,7 @@ type TypePatchDeleteAttribute struct {
 }
 
 // Apply implements the TypePatch interface.
-func (p *TypePatchDeleteAttribute) Apply(ic *ProblemsCollector, t *Type) {
+func (p *TypePatchDeleteAttribute) Apply(ic *cfz.ProblemsCollector, t *Type) {
 	a, ok := t.Attributes[p.AttributeName]
 	if !ok {
 		ic.Collect(t, "delete attribute type patch: missing attribute: '%v'", p.AttributeName)

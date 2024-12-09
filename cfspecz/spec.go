@@ -6,10 +6,16 @@ import (
 
 	"github.com/Jeffail/gabs/v2"
 	"github.com/ibrt/golang-utils/errorz"
+
+	"github.com/ibrt/golang-cloudformation/cfz"
 )
 
 const (
 	specDisplayPath = "spec"
+)
+
+var (
+	_ cfz.ProblemLocation = (*Property)(nil)
 )
 
 // Spec describes the CloudFormation spec.
@@ -73,7 +79,7 @@ func (s *Spec) preProcess() {
 }
 
 func (s *Spec) applyPatches(pm *PatchManager) error {
-	pc := NewProblemsCollector()
+	pc := cfz.NewProblemsCollector()
 	pm.applySpecPatches(pc, s)
 
 	for _, resourceType := range s.ResourceTypes {
@@ -88,7 +94,7 @@ func (s *Spec) applyPatches(pm *PatchManager) error {
 }
 
 func (s *Spec) collectProblems() error {
-	pc := NewProblemsCollector()
+	pc := cfz.NewProblemsCollector()
 
 	if s.ResourceSpecificationVersion == "" {
 		pc.Collect(s, "missing ResourceSpecificationVersion")
