@@ -85,7 +85,6 @@ func (s *Schema) collectProblems() error {
 func (s *Schema) process() {
 	for _, utlr := range s.UnprocessedTopLevelResourcesByFileName {
 		tlr, sts := utlr.toTypes()
-
 		s.ResourceTypes[tlr.Name] = tlr
 
 		for _, st := range sts {
