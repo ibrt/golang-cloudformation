@@ -13,9 +13,9 @@ import (
 
 // Schema describes the CloudFormation JSON schema.
 type Schema struct {
-	UnprocessedTopLevelResourcesByFileName map[string]*UnprocessedTopLevelResource
-	TopLevelResourceTypes                  map[string]*Type
-	StructuredTypes                        map[string]*Type
+	UnprocessedByFileName map[string]*UnprocessedTopLevelResource
+	TopLevelResourceTypes map[string]*Type
+	StructuredTypes       map[string]*Type
 }
 
 // NewSchemaFromBuffer parses and validates a CloudFormation JSON schema from the given buffer
@@ -27,18 +27,18 @@ func NewSchemaFromBuffer(buf []byte) (*Schema, error) {
 	}
 
 	s := &Schema{
-		UnprocessedTopLevelResourcesByFileName: make(map[string]*UnprocessedTopLevelResource),
-		TopLevelResourceTypes:                  make(map[string]*Type),
-		StructuredTypes:                        make(map[string]*Type),
+		UnprocessedByFileName: make(map[string]*UnprocessedTopLevelResource),
+		TopLevelResourceTypes: make(map[string]*Type),
+		StructuredTypes:       make(map[string]*Type),
 	}
 
 	for _, f := range zr.File {
-		pr, err := parseUnprocessedTopLevelResource(f)
+		utlr, err := parseUnprocessedTopLevelResource(f)
 		if err != nil {
 			return nil, errorz.Wrap(err)
 		}
 
-		s.UnprocessedTopLevelResourcesByFileName[f.Name] = pr
+		s.UnprocessedByFileName[f.Name] = utlr
 	}
 
 	if err := s.collectProblems(); err != nil {
@@ -75,7 +75,7 @@ func (s *Schema) collectProblems() error {
 	pc := cfz.NewProblemsCollector()
 	plt := cfz.NewProblemLocationTracker("schema")
 
-	for fileName, utlr := range s.UnprocessedTopLevelResourcesByFileName {
+	for fileName, utlr := range s.UnprocessedByFileName {
 		utlr.collectProblems(pc, plt.WithPathElements(fmt.Sprintf("topLevelResource[%v]", fileName)))
 	}
 
@@ -83,7 +83,7 @@ func (s *Schema) collectProblems() error {
 }
 
 func (s *Schema) process() {
-	for _, utlr := range s.UnprocessedTopLevelResourcesByFileName {
+	for _, utlr := range s.UnprocessedByFileName {
 		tlr, sts := utlr.toTypes()
 		s.TopLevelResourceTypes[tlr.Name] = tlr
 
