@@ -61,15 +61,10 @@ func (t *Type) GoName() string {
 
 // GoComment returns a Go comment for this type.
 func (t *Type) GoComment() string {
-	c := NewComment().
+	return NewComment().
 		AddLinef("%v is a binding for %v.", t.GoName(), t.Name()).
-		MaybeAddLink("Documentation", t.specT.Documentation)
-
-	if t.schemaT != nil && t.schemaT.Description != "" {
-		c.AddLines(t.schemaT.Description)
-	}
-
-	return c.String()
+		MaybeAddLink("Documentation", t.specT.Documentation).
+		String()
 }
 
 // GoPackageName returns the Go package name for this type.
