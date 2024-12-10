@@ -9,6 +9,7 @@ import (
 	"github.com/ibrt/golang-utils/memz"
 	"github.com/ibrt/golang-utils/tplz"
 
+	"github.com/ibrt/golang-cloudformation/cfschemaz"
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
 
@@ -17,14 +18,16 @@ type Type struct {
 	Attributes map[string]*Attribute
 	Properties map[string]*Property
 
-	g     *Generator
-	specT *cfspecz.Type
+	g       *Generator
+	specT   *cfspecz.Type
+	schemaT *cfschemaz.Type
 }
 
-func newType(g *Generator, specT *cfspecz.Type) *Type {
+func newType(g *Generator, specT *cfspecz.Type, schemaT *cfschemaz.Type) *Type {
 	t := &Type{
-		g:     g,
-		specT: specT,
+		g:       g,
+		specT:   specT,
+		schemaT: schemaT,
 	}
 
 	t.Attributes = memz.TransformMapValues(specT.Attributes, func(_ string, specA *cfspecz.Attribute) *Attribute {
@@ -54,6 +57,19 @@ func (t *Type) GetRelatedStructuredTypeName(unqualifiedStructuredTypeName string
 func (t *Type) GoName() string {
 	structName := strings.ReplaceAll(t.specT.Name, "::", "_")
 	return strings.ReplaceAll(structName, ".", "_")
+}
+
+// GoComment returns a Go comment for this type.
+func (t *Type) GoComment() string {
+	c := NewComment().
+		AddLinef("%v is a binding for %v.", t.GoName(), t.Name()).
+		MaybeAddLink("Documentation", t.specT.Documentation)
+
+	if t.schemaT != nil && t.schemaT.Description != "" {
+		c.AddLines(t.schemaT.Description)
+	}
+
+	return c.String()
 }
 
 // GoPackageName returns the Go package name for this type.
@@ -87,11 +103,6 @@ func (t *Type) GoImports() []string {
 // GoSupportBasePackage returns the base package for the support library.
 func (t *Type) GoSupportBasePackage() string {
 	return t.g.o.getGoSupportBasePackage()
-}
-
-// DocumentationURL returns the documentation URL for this type.
-func (t *Type) DocumentationURL() string {
-	return t.specT.Documentation
 }
 
 // IsTopLevelResourceType returns true if this is a top-level resource type, false if it is a structured type.

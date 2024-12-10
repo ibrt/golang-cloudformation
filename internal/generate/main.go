@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ibrt/golang-utils/errorz"
 	"github.com/ibrt/golang-utils/filez"
 	"github.com/ibrt/golang-utils/ioz"
 
+	"github.com/ibrt/golang-cloudformation/cfgenz"
 	"github.com/ibrt/golang-cloudformation/cfschemaz"
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
@@ -38,11 +38,8 @@ func main() {
 	filez.MustWriteFile(specFilePath, 0777, 0666, ioz.MustReadAllAndClose(resp.Body))
 
 	fmt.Println("Parsing and validating CloudFormation spec...")
-	_, err = cfspecz.NewSpecFromBuffer(filez.MustReadFile(specFilePath), cfspecz.NewDefaultPatchManager())
+	spec, err := cfspecz.NewSpecFromBuffer(filez.MustReadFile(specFilePath), cfspecz.NewDefaultPatchManager())
 	errorz.MaybeMustWrap(err)
-
-	// _ = cfgenz.NewGeneratorSpec(cfgenz.NewDefaultGeneratorSpecOptions(), s)
-	//errorz.MaybeMustWrap(gs.Generate(filez.MustAbs(filepath.Join("cfz", "gen"))))
 
 	fmt.Println("Downloading CloudFormation schema...")
 	schemaFilePath := filepath.Join(tmpDirPath, "CloudFormationSchema.zip")
@@ -54,5 +51,7 @@ func main() {
 	fmt.Println("Parsing and validating CloudFormation schema...")
 	schema, err := cfschemaz.NewSchemaFromBuffer(filez.MustReadFile(schemaFilePath))
 	errorz.MaybeMustWrap(err)
-	spew.Dump(schema.StructuredTypes)
+
+	g := cfgenz.NewGenerator(cfgenz.NewDefaultGeneratorOptions(), spec, schema)
+	errorz.MaybeMustWrap(g.Generate(filez.MustAbs(filepath.Join("cfz", "gen"))))
 }

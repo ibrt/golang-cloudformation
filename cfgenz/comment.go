@@ -28,6 +28,11 @@ func NewComment() *Comment {
 	}
 }
 
+// AddLinef formats a line and adds it to the comment.
+func (c *Comment) AddLinef(format string, a ...any) *Comment {
+	return c.AddLines(fmt.Sprintf(format, a...))
+}
+
 // AddLines adds the given lines to the comment.
 func (c *Comment) AddLines(lines ...string) *Comment {
 	for _, l := range lines {
@@ -39,9 +44,11 @@ func (c *Comment) AddLines(lines ...string) *Comment {
 	return c
 }
 
-// AddLink adds the given link to the comment.
-func (c *Comment) AddLink(label, url string) *Comment {
-	c.links[label] = url
+// MaybeAddLink adds the given link to the comment if both label and url are not empty.
+func (c *Comment) MaybeAddLink(label, url string) *Comment {
+	if label != "" && url != "" {
+		c.links[label] = url
+	}
 	return c
 }
 
