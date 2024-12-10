@@ -21,7 +21,7 @@ var (
 	assetsTypeTPL string
 )
 
-// GeneratorOptions describes some options for the generator g.
+// GeneratorOptions describes some options for the generator.
 type GeneratorOptions struct {
 	GoSupportPackage                 string
 	GoOutputPackage                  string
@@ -38,7 +38,7 @@ func (o *GeneratorOptions) getGoSupportType(ic *importsCollector, goType string)
 	return fmt.Sprintf("%v.%v", o.getGoSupportBasePackage(), goType)
 }
 
-// NewDefaultGeneratorOptions initializes a new set of default generator g options.
+// NewDefaultGeneratorOptions initializes a new set of default generator options.
 func NewDefaultGeneratorOptions() *GeneratorOptions {
 	const goBasePackage = "github.com/ibrt/golang-cloudformation"
 	goSupportPackage := path.Join(goBasePackage, "cfz")
@@ -68,28 +68,28 @@ type Generator struct {
 
 // NewGenerator initializes a new generator.
 func NewGenerator(o *GeneratorOptions, spec *cfspecz.Spec, schema *cfschemaz.Schema) *Generator {
-	gs := &Generator{
+	g := &Generator{
 		o:      o,
 		spec:   spec,
 		schema: schema,
 	}
 
-	gs.TopLevelResourceTypes = memz.TransformMapValues(
+	g.TopLevelResourceTypes = memz.TransformMapValues(
 		spec.ResourceTypes,
 		func(_ string, specT *cfspecz.Type) *GeneratorType {
-			return newGeneratorType(gs, specT)
+			return newGeneratorType(g, specT)
 		})
 
-	gs.StructuredTypes = memz.TransformMapValues(
+	g.StructuredTypes = memz.TransformMapValues(
 		spec.PropertyTypes,
 		func(_ string, specT *cfspecz.Type) *GeneratorType {
-			return newGeneratorType(gs, specT)
+			return newGeneratorType(g, specT)
 		})
 
-	return gs
+	return g
 }
 
-// ResourceSpecificationVersion returns the CloudFormation resource specification version for this g.
+// ResourceSpecificationVersion returns the spec version.
 func (g *Generator) ResourceSpecificationVersion() string {
 	return g.spec.ResourceSpecificationVersion
 }
