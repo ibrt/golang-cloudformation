@@ -28,6 +28,8 @@ func NewSchemaFromBuffer(buf []byte) (*Schema, error) {
 
 	s := &Schema{
 		UnprocessedTopLevelResourcesByFileName: make(map[string]*UnprocessedTopLevelResource),
+		ResourceTypes:                          make(map[string]*Type),
+		StructuredTypes:                        make(map[string]*Type),
 	}
 
 	for _, f := range zr.File {
@@ -43,6 +45,7 @@ func NewSchemaFromBuffer(buf []byte) (*Schema, error) {
 		return nil, errorz.Wrap(err)
 	}
 
+	s.process()
 	return s, nil
 }
 
@@ -77,4 +80,16 @@ func (s *Schema) collectProblems() error {
 	}
 
 	return errorz.MaybeWrap(pc.ToError())
+}
+
+func (s *Schema) process() {
+	for _, utlr := range s.UnprocessedTopLevelResourcesByFileName {
+		tlr, sts := utlr.toTypes()
+
+		s.ResourceTypes[tlr.Name] = tlr
+
+		for _, st := range sts {
+			s.StructuredTypes[st.Name] = st
+		}
+	}
 }

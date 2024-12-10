@@ -123,3 +123,23 @@ func (utlr *UnprocessedTopLevelResource) collectProblems(pc *cfz.ProblemsCollect
 		ust.collectProblems(pc, plt.WithPathElements(fmt.Sprintf("definition[%v]", typeName)))
 	}
 }
+
+func (utlr *UnprocessedTopLevelResource) toTypes() (*Type, []*Type) {
+	tlr := &Type{
+		IsTopLevelResourceType: true,
+		Name:                   utlr.TypeName,
+		Description:            utlr.Description,
+	}
+
+	sts := make([]*Type, 0, len(utlr.Definitions))
+
+	for typeName, ust := range utlr.Definitions {
+		sts = append(sts, &Type{
+			IsTopLevelResourceType: false,
+			Name:                   fmt.Sprintf("%v.%v", utlr.TypeName, typeName),
+			Description:            ust.Description,
+		})
+	}
+
+	return tlr, sts
+}

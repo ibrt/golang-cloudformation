@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path/filepath"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ibrt/golang-utils/errorz"
 	"github.com/ibrt/golang-utils/filez"
 	"github.com/ibrt/golang-utils/ioz"
@@ -51,6 +52,7 @@ func main() {
 	filez.MustWriteFile(schemaFilePath, 0777, 0666, ioz.MustReadAllAndClose(resp.Body))
 
 	fmt.Println("Parsing and validating CloudFormation schema...")
-	_, err = cfschemaz.NewSchemaFromBuffer(filez.MustReadFile(schemaFilePath))
+	schema, err := cfschemaz.NewSchemaFromBuffer(filez.MustReadFile(schemaFilePath))
 	errorz.MaybeMustWrap(err)
+	spew.Dump(schema.StructuredTypes)
 }
