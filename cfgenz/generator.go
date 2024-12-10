@@ -76,14 +76,14 @@ func NewGenerator(o *GeneratorOptions, spec *cfspecz.Spec, schema *cfschemaz.Sch
 
 	gs.TopLevelResourceTypes = memz.TransformMapValues(
 		spec.ResourceTypes,
-		func(_ string, t *cfspecz.Type) *GeneratorType {
-			return newGeneratorType(gs, t)
+		func(_ string, specT *cfspecz.Type) *GeneratorType {
+			return newGeneratorType(gs, specT)
 		})
 
 	gs.StructuredTypes = memz.TransformMapValues(
 		spec.PropertyTypes,
-		func(_ string, t *cfspecz.Type) *GeneratorType {
-			return newGeneratorType(gs, t)
+		func(_ string, specT *cfspecz.Type) *GeneratorType {
+			return newGeneratorType(gs, specT)
 		})
 
 	return gs

@@ -12,20 +12,20 @@ import (
 type GeneratorProperty struct {
 	parent         *GeneratorType
 	mustLookupType func(unqualifiedStructuredTypeName string) *GeneratorType
-	p              *cfspecz.Property
+	specP          *cfspecz.Property
 }
 
-func newGeneratorProperty(gt *GeneratorType, p *cfspecz.Property) *GeneratorProperty {
+func newGeneratorProperty(gt *GeneratorType, specP *cfspecz.Property) *GeneratorProperty {
 	return &GeneratorProperty{
 		parent:         gt,
-		mustLookupType: gt.g.makeMustLookupType(gt, p),
-		p:              p,
+		mustLookupType: gt.g.makeMustLookupType(gt, specP),
+		specP:          specP,
 	}
 }
 
 // GoName returns the Go name for this property.
 func (gp *GeneratorProperty) GoName() string {
-	s := []rune(strings.ReplaceAll(gp.p.Name, ".", "_"))
+	s := []rune(strings.ReplaceAll(gp.specP.Name, ".", "_"))
 	s[0] = unicode.ToTitle(s[0])
 	return string(s)
 }
@@ -48,22 +48,22 @@ func (gp *GeneratorProperty) GoUnqualifiedOuterType() string {
 
 // DocumentationURL returns the documentation URL for this property.
 func (gp *GeneratorProperty) DocumentationURL() string {
-	return gp.p.Documentation
+	return gp.specP.Documentation
 }
 
 // Name returns the CloudFormation name for this property.
 func (gp *GeneratorProperty) Name() string {
-	return gp.p.Name
+	return gp.specP.Name
 }
 
 // Required returns true if the property is required, false otherwise.
 func (gp *GeneratorProperty) Required() bool {
-	return gp.p.Required
+	return gp.specP.Required
 }
 
 // UpdateType returns the update type of the property ("Mutable", "Immutable", or "Conditional").
 func (gp *GeneratorProperty) UpdateType() string {
-	return gp.p.UpdateType
+	return gp.specP.UpdateType
 }
 
 func (gp *GeneratorProperty) goType(ic *importsCollector) string {
@@ -72,10 +72,10 @@ func (gp *GeneratorProperty) goType(ic *importsCollector) string {
 }
 
 func (gp *GeneratorProperty) goUnqualifiedOuterType() string {
-	if gp.p.Type == "List" {
+	if gp.specP.Type == "List" {
 		return "ExpressionSlice"
 	}
-	if gp.p.Type == "Map" {
+	if gp.specP.Type == "Map" {
 		return "ExpressionMap"
 	}
 
@@ -83,27 +83,27 @@ func (gp *GeneratorProperty) goUnqualifiedOuterType() string {
 }
 
 func (gp *GeneratorProperty) goGenericType(ic *importsCollector) string {
-	if gp.p.PrimitiveType != "" {
-		return gp.parent.g.getPrimitiveGoType(ic, gp.p.PrimitiveType)
+	if gp.specP.PrimitiveType != "" {
+		return gp.parent.g.getPrimitiveGoType(ic, gp.specP.PrimitiveType)
 	}
 
-	if gp.p.Type == "List" || gp.p.Type == "Map" {
-		if gp.p.PrimitiveItemType != "" {
-			return gp.parent.g.getPrimitiveGoType(ic, gp.p.PrimitiveItemType)
+	if gp.specP.Type == "List" || gp.specP.Type == "Map" {
+		if gp.specP.PrimitiveItemType != "" {
+			return gp.parent.g.getPrimitiveGoType(ic, gp.specP.PrimitiveItemType)
 		}
 
-		if gp.p.ItemType == "Tag" {
+		if gp.specP.ItemType == "Tag" {
 			return gp.parent.g.o.getGoSupportType(ic, "Tag")
 		}
 
-		return gp.mustLookupType(gp.p.ItemType).GoName()
+		return gp.mustLookupType(gp.specP.ItemType).GoName()
 	}
 
-	if gp.p.Type == "Tag" {
+	if gp.specP.Type == "Tag" {
 		return gp.parent.g.o.getGoSupportType(ic, "Tag")
 	}
 
-	return gp.mustLookupType(gp.p.Type).GoName()
+	return gp.mustLookupType(gp.specP.Type).GoName()
 }
 
 func (gp *GeneratorProperty) collectImports(ic *importsCollector) {

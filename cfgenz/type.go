@@ -17,21 +17,21 @@ type GeneratorType struct {
 	Attributes map[string]*GeneratorAttribute
 	Properties map[string]*GeneratorProperty
 
-	g *Generator
-	t *cfspecz.Type
+	g     *Generator
+	specT *cfspecz.Type
 }
 
-func newGeneratorType(gs *Generator, t *cfspecz.Type) *GeneratorType {
+func newGeneratorType(gs *Generator, specT *cfspecz.Type) *GeneratorType {
 	gt := &GeneratorType{
-		g: gs,
-		t: t,
+		g:     gs,
+		specT: specT,
 	}
 
-	gt.Attributes = memz.TransformMapValues(t.Attributes, func(_ string, a *cfspecz.Attribute) *GeneratorAttribute {
+	gt.Attributes = memz.TransformMapValues(specT.Attributes, func(_ string, a *cfspecz.Attribute) *GeneratorAttribute {
 		return newGeneratorAttribute(gt, a)
 	})
 
-	gt.Properties = memz.TransformMapValues(t.Properties, func(_ string, p *cfspecz.Property) *GeneratorProperty {
+	gt.Properties = memz.TransformMapValues(specT.Properties, func(_ string, p *cfspecz.Property) *GeneratorProperty {
 		return newGeneratorProperty(gt, p)
 	})
 
@@ -41,18 +41,18 @@ func newGeneratorType(gs *Generator, t *cfspecz.Type) *GeneratorType {
 // GetRelatedTopLevelResourceTypeName returns the top-level resource type name related to this type, that is, Name if
 // IsTopLevelResourceType = true, or the portion of Name before the first "." otherwise.
 func (gt *GeneratorType) GetRelatedTopLevelResourceTypeName() string {
-	return gt.t.GetRelatedTopLevelResourceTypeName()
+	return gt.specT.GetRelatedTopLevelResourceTypeName()
 }
 
 // GetRelatedStructuredTypeName converts the value of a Type or ItemType field of a property or attribute in this type
 // to its fully qualified structured type name.
 func (gt *GeneratorType) GetRelatedStructuredTypeName(unqualifiedStructuredTypeName string) string {
-	return gt.t.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)
+	return gt.specT.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)
 }
 
 // GoName returns the Go name for this type.
 func (gt *GeneratorType) GoName() string {
-	structName := strings.ReplaceAll(gt.t.Name, "::", "_")
+	structName := strings.ReplaceAll(gt.specT.Name, "::", "_")
 	return strings.ReplaceAll(structName, ".", "_")
 }
 
@@ -91,17 +91,17 @@ func (gt *GeneratorType) GoSupportBasePackage() string {
 
 // DocumentationURL returns the documentation URL for this type.
 func (gt *GeneratorType) DocumentationURL() string {
-	return gt.t.Documentation
+	return gt.specT.Documentation
 }
 
 // IsTopLevelResourceType returns true if this is a top-level resource type, false if it is a structured type.
 func (gt *GeneratorType) IsTopLevelResourceType() bool {
-	return gt.t.IsTopLevelResourceType
+	return gt.specT.IsTopLevelResourceType
 }
 
 // Name returns the CloudFormation name for this type.
 func (gt *GeneratorType) Name() string {
-	return gt.t.Name
+	return gt.specT.Name
 }
 
 func (gt *GeneratorType) generate(outDirPath string) error {
