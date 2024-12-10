@@ -82,12 +82,12 @@ func (s *Spec) applyPatches(pm *PatchManager) error {
 	pc := cfz.NewProblemsCollector()
 	pm.applySpecPatches(pc, s)
 
-	for _, resourceType := range s.ResourceTypes {
-		resourceType.applyPatches(pc, pm)
+	for _, t := range s.ResourceTypes {
+		t.applyPatches(pc, pm)
 	}
 
-	for _, propertyType := range s.PropertyTypes {
-		propertyType.applyPatches(pc, pm)
+	for _, t := range s.PropertyTypes {
+		t.applyPatches(pc, pm)
 	}
 
 	return errorz.MaybeWrap(pc.ToError())
@@ -101,16 +101,16 @@ func (s *Spec) collectProblems() error {
 		return pc.ToError()
 	}
 
-	for _, resourceType := range s.ResourceTypes {
-		resourceType.collectProblems(pc)
+	for _, t := range s.ResourceTypes {
+		t.collectProblems(pc)
 	}
 
-	for _, propertyType := range s.PropertyTypes {
-		propertyType.collectProblems(pc)
+	for _, t := range s.PropertyTypes {
+		t.collectProblems(pc)
 	}
 
-	for _, propertyType := range s.PropertyTypes {
-		pc.MaybeCollect(propertyType, !propertyType.IsReferenced, "unreferenced structured type")
+	for _, t := range s.PropertyTypes {
+		pc.MaybeCollect(t, !t.IsReferenced, "unreferenced structured type")
 	}
 
 	return errorz.MaybeWrap(pc.ToError())
