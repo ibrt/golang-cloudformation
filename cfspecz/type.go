@@ -47,16 +47,16 @@ func (t *Type) GetDisplayPath() string {
 		t.Name)
 }
 
-func (t *Type) preProcess(spec *Spec, isTopLevelResourceType bool, name string) {
+func (t *Type) preProcess(s *Spec, isTopLevelResourceType bool, name string) {
 	t.IsTopLevelResourceType = isTopLevelResourceType
 	t.Name = name
 
-	for attributeName, attribute := range t.Attributes {
-		attribute.preProcess(spec, t, attributeName)
+	for attributeName, a := range t.Attributes {
+		a.preProcess(s, t, attributeName)
 	}
 
-	for propertyName, property := range t.Properties {
-		property.preProcess(spec, t, propertyName)
+	for propertyName, p := range t.Properties {
+		p.preProcess(s, t, propertyName)
 	}
 }
 

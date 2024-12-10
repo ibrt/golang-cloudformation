@@ -31,11 +31,11 @@ func (p *Property) GetDisplayPath() string {
 	return p.displayPath
 }
 
-func (p *Property) preProcess(spec *Spec, parent *Type, name string) {
+func (p *Property) preProcess(s *Spec, parent *Type, name string) {
 	p.Name = name
 
 	p.MaybeLookupType = func(unqualifiedStructuredTypeName string) *Type {
-		if t := spec.PropertyTypes[parent.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]; t != nil {
+		if t := s.StructuredTypes[parent.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]; t != nil {
 			t.IsReferenced = true
 			return t
 		}

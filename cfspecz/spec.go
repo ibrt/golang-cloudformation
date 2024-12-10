@@ -21,8 +21,8 @@ var (
 // Spec describes the CloudFormation spec.
 type Spec struct {
 	ResourceSpecificationVersion string
-	ResourceTypes                map[string]*Type
-	PropertyTypes                map[string]*Type
+	TopLevelResourceTypes        map[string]*Type `json:"ResourceTypes"`
+	StructuredTypes              map[string]*Type `json:"PropertyTypes"`
 }
 
 // NewSpecFromBuffer parses, patches (using the given patch manager), and validates a CloudFormation spec from the
@@ -69,12 +69,12 @@ func (*Spec) GetDisplayPath() string {
 }
 
 func (s *Spec) preProcess() {
-	for resourceTypeName, resourceType := range s.ResourceTypes {
-		resourceType.preProcess(s, true, resourceTypeName)
+	for name, t := range s.TopLevelResourceTypes {
+		t.preProcess(s, true, name)
 	}
 
-	for propertyTypeName, propertyType := range s.PropertyTypes {
-		propertyType.preProcess(s, false, propertyTypeName)
+	for name, t := range s.StructuredTypes {
+		t.preProcess(s, false, name)
 	}
 }
 
@@ -82,11 +82,11 @@ func (s *Spec) applyPatches(pm *PatchManager) error {
 	pc := cfz.NewProblemsCollector()
 	pm.applySpecPatches(pc, s)
 
-	for _, t := range s.ResourceTypes {
+	for _, t := range s.TopLevelResourceTypes {
 		t.applyPatches(pc, pm)
 	}
 
-	for _, t := range s.PropertyTypes {
+	for _, t := range s.StructuredTypes {
 		t.applyPatches(pc, pm)
 	}
 
@@ -101,15 +101,15 @@ func (s *Spec) collectProblems() error {
 		return pc.ToError()
 	}
 
-	for _, t := range s.ResourceTypes {
+	for _, t := range s.TopLevelResourceTypes {
 		t.collectProblems(pc)
 	}
 
-	for _, t := range s.PropertyTypes {
+	for _, t := range s.StructuredTypes {
 		t.collectProblems(pc)
 	}
 
-	for _, t := range s.PropertyTypes {
+	for _, t := range s.StructuredTypes {
 		pc.MaybeCollect(t, !t.IsReferenced, "unreferenced structured type")
 	}
 

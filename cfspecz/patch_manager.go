@@ -212,13 +212,13 @@ type SpecPatchDeleteType struct {
 // Apply implements the SpecPatch interface.
 func (p *SpecPatchDeleteType) Apply(ic *cfz.ProblemsCollector, s *Spec) {
 	if strings.Contains(p.TypeName, ".") || memz.ValNilToZero(p.ForceIsStructuredType) {
-		if _, ok := s.PropertyTypes[p.TypeName]; ok {
-			delete(s.PropertyTypes, p.TypeName)
+		if _, ok := s.StructuredTypes[p.TypeName]; ok {
+			delete(s.StructuredTypes, p.TypeName)
 			return
 		}
 	} else {
-		if _, ok := s.ResourceTypes[p.TypeName]; ok {
-			delete(s.ResourceTypes, p.TypeName)
+		if _, ok := s.TopLevelResourceTypes[p.TypeName]; ok {
+			delete(s.TopLevelResourceTypes, p.TypeName)
 			return
 		}
 	}
