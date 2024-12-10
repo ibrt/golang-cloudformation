@@ -12,12 +12,12 @@ import (
 
 // Attribute describes an attribute of a top-level resource type.
 type Attribute struct {
-	parent         *GeneratorType
-	mustLookupType func(unqualifiedStructuredTypeName string) *GeneratorType
+	parent         *Type
+	mustLookupType func(unqualifiedStructuredTypeName string) *Type
 	specA          *cfspecz.Attribute
 }
 
-func newAttribute(t *GeneratorType, specA *cfspecz.Attribute) *Attribute {
+func newAttribute(t *Type, specA *cfspecz.Attribute) *Attribute {
 	return &Attribute{
 		parent:         t,
 		mustLookupType: t.g.makeMustLookupType(t, specA),

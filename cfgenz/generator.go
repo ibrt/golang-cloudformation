@@ -26,7 +26,7 @@ type GeneratorOptions struct {
 	GoSupportPackage                 string
 	GoOutputPackage                  string
 	TypeTemplate                     *ttpl.Template
-	TypeTemplateGetImplicitGoImports func(t *GeneratorType) []string
+	TypeTemplateGetImplicitGoImports func(t *Type) []string
 }
 
 func (o *GeneratorOptions) getGoSupportBasePackage() string {
@@ -47,7 +47,7 @@ func NewDefaultGeneratorOptions() *GeneratorOptions {
 		GoSupportPackage: goSupportPackage,
 		GoOutputPackage:  path.Join(goBasePackage, "cfz", "gen"),
 		TypeTemplate:     ttpl.Must(ttpl.New("").Parse(assetsTypeTPL)),
-		TypeTemplateGetImplicitGoImports: func(gt *GeneratorType) []string {
+		TypeTemplateGetImplicitGoImports: func(gt *Type) []string {
 			return newImportsCollector().
 				maybeCollectImports(gt.IsTopLevelResourceType(), goSupportPackage).
 				maybeCollectImports(gt.IsTopLevelResourceType(), "encoding/json").
@@ -58,8 +58,8 @@ func NewDefaultGeneratorOptions() *GeneratorOptions {
 
 // Generator combines g and JSON schema to generate a CloudFormation library.
 type Generator struct {
-	TopLevelResourceTypes map[string]*GeneratorType
-	StructuredTypes       map[string]*GeneratorType
+	TopLevelResourceTypes map[string]*Type
+	StructuredTypes       map[string]*Type
 
 	o      *GeneratorOptions
 	spec   *cfspecz.Spec
@@ -76,14 +76,14 @@ func NewGenerator(o *GeneratorOptions, spec *cfspecz.Spec, schema *cfschemaz.Sch
 
 	g.TopLevelResourceTypes = memz.TransformMapValues(
 		spec.ResourceTypes,
-		func(_ string, specT *cfspecz.Type) *GeneratorType {
-			return newGeneratorType(g, specT)
+		func(_ string, specT *cfspecz.Type) *Type {
+			return newType(g, specT)
 		})
 
 	g.StructuredTypes = memz.TransformMapValues(
 		spec.PropertyTypes,
-		func(_ string, specT *cfspecz.Type) *GeneratorType {
-			return newGeneratorType(g, specT)
+		func(_ string, specT *cfspecz.Type) *Type {
+			return newType(g, specT)
 		})
 
 	return g
@@ -115,8 +115,8 @@ func (g *Generator) Generate(outDirPath string) error {
 	return nil
 }
 
-func (g *Generator) makeMustLookupType(t *GeneratorType, pl cfz.ProblemLocation) func(string) *GeneratorType {
-	return func(unqualifiedStructuredTypeName string) *GeneratorType {
+func (g *Generator) makeMustLookupType(t *Type, pl cfz.ProblemLocation) func(string) *Type {
+	return func(unqualifiedStructuredTypeName string) *Type {
 		t := g.StructuredTypes[t.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
 
 		errorz.Assertf(t != nil,

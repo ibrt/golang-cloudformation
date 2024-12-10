@@ -10,12 +10,12 @@ import (
 
 // Property describes a property of either a top-level resource or structured type.
 type Property struct {
-	parent         *GeneratorType
-	mustLookupType func(unqualifiedStructuredTypeName string) *GeneratorType
+	parent         *Type
+	mustLookupType func(unqualifiedStructuredTypeName string) *Type
 	specP          *cfspecz.Property
 }
 
-func newProperty(t *GeneratorType, specP *cfspecz.Property) *Property {
+func newProperty(t *Type, specP *cfspecz.Property) *Property {
 	return &Property{
 		parent:         t,
 		mustLookupType: t.g.makeMustLookupType(t, specP),
