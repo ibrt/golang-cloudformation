@@ -14,7 +14,7 @@ import (
 
 // GeneratorType describes either a top-level resource type or a structured type in the generator g.
 type GeneratorType struct {
-	Attributes map[string]*GeneratorAttribute
+	Attributes map[string]*Attribute
 	Properties map[string]*GeneratorProperty
 
 	g     *Generator
@@ -27,8 +27,8 @@ func newGeneratorType(gs *Generator, specT *cfspecz.Type) *GeneratorType {
 		specT: specT,
 	}
 
-	gt.Attributes = memz.TransformMapValues(specT.Attributes, func(_ string, a *cfspecz.Attribute) *GeneratorAttribute {
-		return newGeneratorAttribute(gt, a)
+	gt.Attributes = memz.TransformMapValues(specT.Attributes, func(_ string, a *cfspecz.Attribute) *Attribute {
+		return newAttribute(gt, a)
 	})
 
 	gt.Properties = memz.TransformMapValues(specT.Properties, func(_ string, p *cfspecz.Property) *GeneratorProperty {
