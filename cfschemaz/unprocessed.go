@@ -72,7 +72,17 @@ type UnprocessedStructuredType struct {
 }
 
 func (ust *UnprocessedStructuredType) collectProblems(pc *cfz.ProblemsCollector, plt *cfz.ProblemLocationTracker) {
+	fmt.Println(ust.Type)
+
 	// TODO
+}
+
+func (ust *UnprocessedStructuredType) toType(utlr *UnprocessedTopLevelResource, name string) *Type {
+	return &Type{
+		IsTopLevelResourceType: false,
+		Name:                   fmt.Sprintf("%v.%v", utlr.TypeName, name),
+		Description:            ust.Description,
+	}
 }
 
 // UnprocessedTagging describes part of the CloudFormation JSON schema for a resource.
@@ -133,12 +143,8 @@ func (utlr *UnprocessedTopLevelResource) toTypes() (*Type, []*Type) {
 
 	sts := make([]*Type, 0, len(utlr.Definitions))
 
-	for typeName, ust := range utlr.Definitions {
-		sts = append(sts, &Type{
-			IsTopLevelResourceType: false,
-			Name:                   fmt.Sprintf("%v.%v", utlr.TypeName, typeName),
-			Description:            ust.Description,
-		})
+	for name, ust := range utlr.Definitions {
+		sts = append(sts, ust.toType(utlr, name))
 	}
 
 	return tlr, sts
