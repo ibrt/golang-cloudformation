@@ -14,7 +14,7 @@ import (
 // Schema describes the CloudFormation JSON schema.
 type Schema struct {
 	UnprocessedTopLevelResourcesByFileName map[string]*UnprocessedTopLevelResource
-	ResourceTypes                          map[string]*Type
+	TopLevelResourceTypes                  map[string]*Type
 	StructuredTypes                        map[string]*Type
 }
 
@@ -28,7 +28,7 @@ func NewSchemaFromBuffer(buf []byte) (*Schema, error) {
 
 	s := &Schema{
 		UnprocessedTopLevelResourcesByFileName: make(map[string]*UnprocessedTopLevelResource),
-		ResourceTypes:                          make(map[string]*Type),
+		TopLevelResourceTypes:                  make(map[string]*Type),
 		StructuredTypes:                        make(map[string]*Type),
 	}
 
@@ -85,7 +85,7 @@ func (s *Schema) collectProblems() error {
 func (s *Schema) process() {
 	for _, utlr := range s.UnprocessedTopLevelResourcesByFileName {
 		tlr, sts := utlr.toTypes()
-		s.ResourceTypes[tlr.Name] = tlr
+		s.TopLevelResourceTypes[tlr.Name] = tlr
 
 		for _, st := range sts {
 			s.StructuredTypes[st.Name] = st
