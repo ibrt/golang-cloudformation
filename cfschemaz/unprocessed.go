@@ -1,10 +1,99 @@
 package cfschemaz
 
 import (
+	"encoding/json"
 	"fmt"
+
+	"github.com/ibrt/golang-utils/errorz"
+	"github.com/ibrt/golang-utils/jsonz"
 
 	"github.com/ibrt/golang-cloudformation/cfz"
 )
+
+var (
+	_ json.Unmarshaler = (*UnprocessedEnum)(nil)
+)
+
+// UnprocessedEnum describes part of the CloudFormation JSON schema for a resource.
+type UnprocessedEnum struct {
+	ss []string
+	nn []json.Number
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (ue *UnprocessedEnum) UnmarshalJSON(bytes []byte) error {
+	if ss, err := jsonz.Unmarshal[[]string](bytes); err == nil {
+		*ue = UnprocessedEnum{ss: ss}
+		return nil
+	}
+
+	if nn, err := jsonz.Unmarshal[[]json.Number](bytes); err == nil {
+		*ue = UnprocessedEnum{nn: nn}
+		return nil
+	}
+
+	return errorz.Errorf("invalid enum value: '%s'", bytes)
+}
+
+// AsString returns the enum as []string if possible.
+func (ue *UnprocessedEnum) AsString() []string {
+	if ue != nil {
+		return ue.ss
+	}
+	return nil
+}
+
+// AsFloat64 returns the enum as []float64 if possible.
+func (ue *UnprocessedEnum) AsFloat64() ([]float64, error) {
+	if ue == nil || ue.nn == nil {
+		return nil, nil
+	}
+
+	ff := make([]float64, len(ue.nn))
+
+	for _, n := range ue.nn {
+		f, err := n.Float64()
+		if err != nil {
+			return nil, errorz.Wrap(err)
+		}
+		ff = append(ff, f)
+	}
+
+	return ff, nil
+}
+
+// MustAsFloat64 returns the enum as []float64 if possible, panics on error.
+func (ue *UnprocessedEnum) MustAsFloat64() []float64 {
+	ff, err := ue.AsFloat64()
+	errorz.MaybeMustWrap(err)
+	return ff
+}
+
+// AsInt64 returns the enum as []int64 if possible.
+func (ue *UnprocessedEnum) AsInt64() ([]int64, error) {
+	if ue == nil || ue.nn == nil {
+		return nil, nil
+	}
+
+	ii := make([]int64, len(ue.nn))
+
+	for _, n := range ue.nn {
+		i, err := n.Int64()
+		if err != nil {
+			return nil, errorz.Wrap(err)
+		}
+		ii = append(ii, i)
+	}
+
+	return ii, nil
+}
+
+// MustAsInt64 returns the enum as []int64 if possible, panics on error.
+func (ue *UnprocessedEnum) MustAsInt64() []int64 {
+	ii, err := ue.AsInt64()
+	errorz.MaybeMustWrap(err)
+	return ii
+}
 
 // UnprocessedHandlers describes part of the CloudFormation JSON schema for a resource.
 type UnprocessedHandlers struct {
@@ -37,28 +126,28 @@ type UnprocessedResourceLink struct {
 // UnprocessedStructuredType describes part of the CloudFormation JSON schema.
 type UnprocessedStructuredType struct {
 	AdditionalProperties bool                                  `json:"additionalProperties,omitempty"`
-	AllOf                any                                   `json:"allOf,omitempty"` // TODO(ibrt): Type.
-	AnyOf                any                                   `json:"anyOf,omitempty"` // TODO(ibrt): Type.
+	AllOf                any                                   `json:"allOf,omitempty"`
+	AnyOf                any                                   `json:"anyOf,omitempty"`
 	ArrayType            string                                `json:"arrayType,omitempty"`
 	Comment              string                                `json:"$comment,omitempty"`
 	Const                string                                `json:"const,omitempty"`
-	Default              any                                   `json:"default,omitempty"` // TODO(ibrt): Type.
+	Default              any                                   `json:"default,omitempty"` // If specified, it is a value of "type".
 	Dependencies         map[string][]string                   `json:"dependencies,omitempty"`
 	Description          string                                `json:"description,omitempty"`
-	Enum                 any                                   `json:"enum,omitempty"`     // TODO(ibrt): Type.
-	Examples             any                                   `json:"examples,omitempty"` // TODO(ibrt): Type.
+	Enum                 *UnprocessedEnum                      `json:"enum,omitempty"`
+	Examples             any                                   `json:"examples,omitempty"`
 	Format               string                                `json:"format,omitempty"`
 	InsertionOrder       *bool                                 `json:"insertionOrder,omitempty"`
 	Items                *UnprocessedStructuredType            `json:"items,omitempty"`
 	MaxItems             *int                                  `json:"maxItems,omitempty"`
 	MaxLength            *int                                  `json:"maxLength,omitempty"`
 	MaxProperties        *int                                  `json:"maxProperties,omitempty"`
-	Maximum              *float64                              `json:"maximum,omitempty"`
+	Maximum              *json.Number                          `json:"maximum,omitempty"`
 	MinItems             *int                                  `json:"minItems,omitempty"`
 	MinLength            *int                                  `json:"minLength,omitempty"`
 	MinProperties        *int                                  `json:"minProperties,omitempty"`
-	Minimum              *float64                              `json:"minimum,omitempty"`
-	MultipleOf           *float64                              `json:"multipleOf,omitempty"`
+	Minimum              *json.Number                          `json:"minimum,omitempty"`
+	MultipleOf           *json.Number                          `json:"multipleOf,omitempty"`
 	OneOf                []*UnprocessedStructuredType          `json:"oneOf,omitempty"`
 	Pattern              *string                               `json:"pattern,omitempty"`
 	PatternProperties    map[string]*UnprocessedStructuredType `json:"patternProperties,omitempty"`
@@ -67,22 +156,44 @@ type UnprocessedStructuredType struct {
 	RelationshipRef      *UnprocessedRelationshipRef           `json:"relationshipRef,omitempty"`
 	Required             []string                              `json:"required,omitempty"`
 	Title                string                                `json:"title,omitempty"`
-	Type                 any                                   `json:"type,omitempty"` // TODO(ibrt): Type, so far string or []string.
+	Type                 any                                   `json:"type,omitempty"` // This can be string or []string.
 	UniqueItems          *bool                                 `json:"uniqueItems,omitempty"`
 }
 
 func (ust *UnprocessedStructuredType) collectProblems(pc *cfz.ProblemsCollector, plt *cfz.ProblemLocationTracker) {
-	fmt.Println(ust.Type)
+	if ust.Type == "integer" {
+		if _, err := ust.Enum.AsInt64(); err != nil {
+			pc.Collect(plt, "invalid enum: %v", err.Error())
+		}
+	}
 
-	// TODO
+	if ust.Type == "number" {
+		if _, err := ust.Enum.AsFloat64(); err != nil {
+			pc.Collect(plt, "invalid enum: %v", err.Error())
+		}
+	}
+
+	for name, pUST := range ust.Properties {
+		pUST.collectProblems(pc, plt.WithPathElements(fmt.Sprintf("property[%v]", name)))
+	}
 }
 
-func (ust *UnprocessedStructuredType) toType(utlr *UnprocessedTopLevelResource, name string) *Type {
-	return &Type{
+func (ust *UnprocessedStructuredType) maybeToPreprocessedType(s *Schema, utlr *UnprocessedTopLevelResource, name string) *Type {
+	if ust.Type != "object" {
+		return nil
+	}
+
+	t := &Type{
 		IsTopLevelResourceType: false,
 		Name:                   fmt.Sprintf("%v.%v", utlr.TypeName, name),
 		Description:            ust.Description,
+		Properties:             make(map[string]*Property),
+		s:                      s,
+		utlr:                   utlr,
+		ust:                    ust,
 	}
+
+	return t
 }
 
 // UnprocessedTagging describes part of the CloudFormation JSON schema for a resource.
@@ -129,22 +240,32 @@ func (utlr *UnprocessedTopLevelResource) collectProblems(pc *cfz.ProblemsCollect
 	pc.MaybeCollect(plt, utlr.TypeName == "", "missing TypeName")
 	pc.MaybeCollect(plt, utlr.Description == "", "missing Description")
 
-	for typeName, ust := range utlr.Definitions {
-		ust.collectProblems(pc, plt.WithPathElements(fmt.Sprintf("definition[%v]", typeName)))
+	for name, dUST := range utlr.Definitions {
+		dUST.collectProblems(pc, plt.WithPathElements(fmt.Sprintf("definition[%v]", name)))
+	}
+
+	for name, pUST := range utlr.Properties {
+		pUST.collectProblems(pc, plt.WithPathElements(fmt.Sprintf("property[%v]", name)))
 	}
 }
 
-func (utlr *UnprocessedTopLevelResource) toTypes() (*Type, []*Type) {
+func (utlr *UnprocessedTopLevelResource) toPreprocessedTypes(s *Schema) (*Type, []*Type) {
 	tlr := &Type{
 		IsTopLevelResourceType: true,
 		Name:                   utlr.TypeName,
 		Description:            utlr.Description,
+		Properties:             make(map[string]*Property),
+		s:                      s,
+		utlr:                   utlr,
+		ust:                    nil,
 	}
 
 	sts := make([]*Type, 0, len(utlr.Definitions))
 
 	for name, ust := range utlr.Definitions {
-		sts = append(sts, ust.toType(utlr, name))
+		if t := ust.maybeToPreprocessedType(s, utlr, name); t != nil {
+			sts = append(sts, t)
+		}
 	}
 
 	return tlr, sts
