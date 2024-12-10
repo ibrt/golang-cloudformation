@@ -115,13 +115,13 @@ func (g *Generator) Generate(outDirPath string) error {
 	return nil
 }
 
-func (g *Generator) makeMustLookupType(gt *GeneratorType, sc cfz.ProblemLocation) func(string) *GeneratorType {
+func (g *Generator) makeMustLookupType(t *GeneratorType, pl cfz.ProblemLocation) func(string) *GeneratorType {
 	return func(unqualifiedStructuredTypeName string) *GeneratorType {
-		t := g.StructuredTypes[gt.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
+		t := g.StructuredTypes[t.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)]
 
 		errorz.Assertf(t != nil,
 			"type lookup failed: from '%v' to '%v'",
-			sc.GetDisplayPath(), unqualifiedStructuredTypeName)
+			pl.GetDisplayPath(), unqualifiedStructuredTypeName)
 
 		return t
 	}
