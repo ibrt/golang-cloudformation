@@ -21,7 +21,7 @@ var (
 	assetsTypeTPL string
 )
 
-// GeneratorOptions describes some options for the generator spec.
+// GeneratorOptions describes some options for the generator g.
 type GeneratorOptions struct {
 	GoSupportPackage                 string
 	GoOutputPackage                  string
@@ -38,7 +38,7 @@ func (o *GeneratorOptions) getGoSupportType(ic *importsCollector, goType string)
 	return fmt.Sprintf("%v.%v", o.getGoSupportBasePackage(), goType)
 }
 
-// NewDefaultGeneratorOptions initializes a new set of default generator spec options.
+// NewDefaultGeneratorOptions initializes a new set of default generator g options.
 func NewDefaultGeneratorOptions() *GeneratorOptions {
 	const goBasePackage = "github.com/ibrt/golang-cloudformation"
 	goSupportPackage := path.Join(goBasePackage, "cfz")
@@ -56,7 +56,7 @@ func NewDefaultGeneratorOptions() *GeneratorOptions {
 	}
 }
 
-// Generator combines spec and JSON schema to generate a CloudFormation library.
+// Generator combines g and JSON schema to generate a CloudFormation library.
 type Generator struct {
 	TopLevelResourceTypes map[string]*GeneratorType
 	StructuredTypes       map[string]*GeneratorType
@@ -66,8 +66,8 @@ type Generator struct {
 	schema *cfschemaz.Schema
 }
 
-// NewGeneratorSpec initializes a new generator spec.
-func NewGeneratorSpec(o *GeneratorOptions, spec *cfspecz.Spec, schema *cfschemaz.Schema) *Generator {
+// NewGenerator initializes a new generator.
+func NewGenerator(o *GeneratorOptions, spec *cfspecz.Spec, schema *cfschemaz.Schema) *Generator {
 	gs := &Generator{
 		o:      o,
 		spec:   spec,
@@ -89,7 +89,7 @@ func NewGeneratorSpec(o *GeneratorOptions, spec *cfspecz.Spec, schema *cfschemaz
 	return gs
 }
 
-// ResourceSpecificationVersion returns the CloudFormation resource specification version for this spec.
+// ResourceSpecificationVersion returns the CloudFormation resource specification version for this g.
 func (g *Generator) ResourceSpecificationVersion() string {
 	return g.spec.ResourceSpecificationVersion
 }

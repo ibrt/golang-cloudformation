@@ -12,19 +12,19 @@ import (
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
 
-// GeneratorType describes either a top-level resource type or a structured type in the generator spec.
+// GeneratorType describes either a top-level resource type or a structured type in the generator g.
 type GeneratorType struct {
 	Attributes map[string]*GeneratorAttribute
 	Properties map[string]*GeneratorProperty
 
-	spec *Generator
-	t    *cfspecz.Type
+	g *Generator
+	t *cfspecz.Type
 }
 
 func newGeneratorType(gs *Generator, t *cfspecz.Type) *GeneratorType {
 	gt := &GeneratorType{
-		spec: gs,
-		t:    t,
+		g: gs,
+		t: t,
 	}
 
 	gt.Attributes = memz.TransformMapValues(t.Attributes, func(_ string, a *cfspecz.Attribute) *GeneratorAttribute {
@@ -71,7 +71,7 @@ func (gt *GeneratorType) GoFileName() string {
 // GoImports returns the Go imports for this type.
 func (gt *GeneratorType) GoImports() []string {
 	ic := newImportsCollector()
-	ic.collectImports(gt.spec.o.TypeTemplateGetImplicitGoImports(gt)...)
+	ic.collectImports(gt.g.o.TypeTemplateGetImplicitGoImports(gt)...)
 
 	for _, ga := range gt.Attributes {
 		ga.collectImports(ic)
@@ -86,7 +86,7 @@ func (gt *GeneratorType) GoImports() []string {
 
 // GoSupportBasePackage returns the base package for the support library.
 func (gt *GeneratorType) GoSupportBasePackage() string {
-	return gt.spec.o.getGoSupportBasePackage()
+	return gt.g.o.getGoSupportBasePackage()
 }
 
 // DocumentationURL returns the documentation URL for this type.
@@ -105,7 +105,7 @@ func (gt *GeneratorType) Name() string {
 }
 
 func (gt *GeneratorType) generate(outDirPath string) error {
-	buf, err := tplz.ExecuteGo(gt.spec.o.TypeTemplate, gt)
+	buf, err := tplz.ExecuteGo(gt.g.o.TypeTemplate, gt)
 	if err != nil {
 		return errorz.Wrap(err)
 	}

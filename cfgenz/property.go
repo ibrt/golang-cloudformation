@@ -8,7 +8,7 @@ import (
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
 
-// GeneratorProperty describes a property of either a top-level resource or structured type in the generator spec.
+// GeneratorProperty describes a property of either a top-level resource or structured type in the generator g.
 type GeneratorProperty struct {
 	parent         *GeneratorType
 	mustLookupType func(unqualifiedStructuredTypeName string) *GeneratorType
@@ -18,7 +18,7 @@ type GeneratorProperty struct {
 func newGeneratorProperty(gt *GeneratorType, p *cfspecz.Property) *GeneratorProperty {
 	return &GeneratorProperty{
 		parent:         gt,
-		mustLookupType: gt.spec.makeMustLookupType(gt, p),
+		mustLookupType: gt.g.makeMustLookupType(gt, p),
 		p:              p,
 	}
 }
@@ -67,7 +67,7 @@ func (gp *GeneratorProperty) UpdateType() string {
 }
 
 func (gp *GeneratorProperty) goType(ic *importsCollector) string {
-	return gp.parent.spec.o.getGoSupportType(ic,
+	return gp.parent.g.o.getGoSupportType(ic,
 		fmt.Sprintf("%v[%v]", gp.goUnqualifiedOuterType(), gp.goGenericType(ic)))
 }
 
@@ -84,23 +84,23 @@ func (gp *GeneratorProperty) goUnqualifiedOuterType() string {
 
 func (gp *GeneratorProperty) goGenericType(ic *importsCollector) string {
 	if gp.p.PrimitiveType != "" {
-		return gp.parent.spec.getPrimitiveGoType(ic, gp.p.PrimitiveType)
+		return gp.parent.g.getPrimitiveGoType(ic, gp.p.PrimitiveType)
 	}
 
 	if gp.p.Type == "List" || gp.p.Type == "Map" {
 		if gp.p.PrimitiveItemType != "" {
-			return gp.parent.spec.getPrimitiveGoType(ic, gp.p.PrimitiveItemType)
+			return gp.parent.g.getPrimitiveGoType(ic, gp.p.PrimitiveItemType)
 		}
 
 		if gp.p.ItemType == "Tag" {
-			return gp.parent.spec.o.getGoSupportType(ic, "Tag")
+			return gp.parent.g.o.getGoSupportType(ic, "Tag")
 		}
 
 		return gp.mustLookupType(gp.p.ItemType).GoName()
 	}
 
 	if gp.p.Type == "Tag" {
-		return gp.parent.spec.o.getGoSupportType(ic, "Tag")
+		return gp.parent.g.o.getGoSupportType(ic, "Tag")
 	}
 
 	return gp.mustLookupType(gp.p.Type).GoName()

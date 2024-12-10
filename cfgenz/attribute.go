@@ -10,7 +10,7 @@ import (
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
 
-// GeneratorAttribute describes an attribute of a top-level resource type in the generator spec.
+// GeneratorAttribute describes an attribute of a top-level resource type in the generator g.
 type GeneratorAttribute struct {
 	parent         *GeneratorType
 	mustLookupType func(unqualifiedStructuredTypeName string) *GeneratorType
@@ -20,7 +20,7 @@ type GeneratorAttribute struct {
 func newGeneratorAttribute(gt *GeneratorType, a *cfspecz.Attribute) *GeneratorAttribute {
 	return &GeneratorAttribute{
 		parent:         gt,
-		mustLookupType: gt.spec.makeMustLookupType(gt, a),
+		mustLookupType: gt.g.makeMustLookupType(gt, a),
 		a:              a,
 	}
 }
@@ -64,33 +64,33 @@ func (ga *GeneratorAttribute) Name() string {
 
 func (ga *GeneratorAttribute) goType(ic *importsCollector) string {
 	if ga.a.Type == "List" {
-		return ga.parent.spec.o.getGoSupportType(ic,
+		return ga.parent.g.o.getGoSupportType(ic,
 			fmt.Sprintf("ExpressionSlice[%v]", ga.goGenericType(ic)))
 	}
 
-	return ga.parent.spec.o.getGoSupportType(ic,
+	return ga.parent.g.o.getGoSupportType(ic,
 		fmt.Sprintf("Expression[%v]", ga.goGenericType(ic)))
 }
 
 func (ga *GeneratorAttribute) goGenericType(ic *importsCollector) string {
 	if ga.a.PrimitiveType != "" {
-		return ga.parent.spec.getPrimitiveGoType(ic, ga.a.PrimitiveType)
+		return ga.parent.g.getPrimitiveGoType(ic, ga.a.PrimitiveType)
 	}
 
 	if ga.a.Type == "List" {
 		if ga.a.PrimitiveItemType != "" {
-			return ga.parent.spec.getPrimitiveGoType(ic, ga.a.PrimitiveItemType)
+			return ga.parent.g.getPrimitiveGoType(ic, ga.a.PrimitiveItemType)
 		}
 
 		if ga.a.ItemType == "Tag" {
-			return ga.parent.spec.o.getGoSupportType(ic, "Tag")
+			return ga.parent.g.o.getGoSupportType(ic, "Tag")
 		}
 
 		return ga.mustLookupType(ga.a.ItemType).GoName()
 	}
 
 	if ga.a.Type == "Tag" {
-		return ga.parent.spec.o.getGoSupportType(ic, "Tag")
+		return ga.parent.g.o.getGoSupportType(ic, "Tag")
 	}
 
 	return ga.mustLookupType(ga.a.Type).GoName()
