@@ -41,11 +41,10 @@ func NewSchemaFromBuffer(buf []byte) (*Schema, error) {
 		s.UnprocessedByFileName[f.Name] = utlr
 	}
 
-	if err := s.collectProblems(); err != nil {
+	if err := s.process(); err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
-	s.process()
 	return s, nil
 }
 
@@ -71,6 +70,26 @@ func parseUnprocessedTopLevelResource(f *zip.File) (utlr *UnprocessedTopLevelRes
 	return utlr, nil
 }
 
+func (s *Schema) process() error {
+	plt := cfz.NewProblemLocationTracker("schema")
+
+	for fileName, utlr := range s.UnprocessedByFileName {
+		tlr, sts, err := utlr.toTypes(plt, s)
+		if err != nil {
+			return errorz.Wrap(err, errorz.Errorf(fileName))
+		}
+
+		s.TopLevelResourceTypes[tlr.Name] = tlr
+
+		for _, st := range sts {
+			s.StructuredTypes[st.Name] = st
+		}
+	}
+
+	return nil
+}
+
+/*
 func (s *Schema) collectProblems() error {
 	pc := cfz.NewProblemsCollector()
 	plt := cfz.NewProblemLocationTracker("schema")
@@ -84,7 +103,7 @@ func (s *Schema) collectProblems() error {
 
 func (s *Schema) process() {
 	for _, utlr := range s.UnprocessedByFileName {
-		tlr, sts := utlr.toPreprocessedTypes(s)
+		tlr, sts := utlr.toTypes(s)
 		s.TopLevelResourceTypes[tlr.Name] = tlr
 
 		for _, st := range sts {
@@ -100,3 +119,4 @@ func (s *Schema) process() {
 		t.process()
 	}
 }
+*/

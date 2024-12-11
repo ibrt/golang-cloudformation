@@ -1,61 +1,13 @@
 package cfschemaz
 
-import (
-	"github.com/ibrt/golang-utils/errorz"
-)
-
 // Property describes a property of either a top-level resource or structured type.
 type Property struct {
-	Name string
-
-	TypeString     *PropertyTypeString
-	TypeInteger    *PropertyTypeInteger
-	TypeNumber     *PropertyTypeNumber
-	TypeStructured *PropertyTypeStructured
-	TypeArray      *PropertyTypeArray
+	Name       string
+	Validation *Validation
 }
 
-// PropertyTypeString describes a string value.
-type PropertyTypeString struct {
-	MinLength *int
-	MaxLength *int
-	Pattern   *string
-	Enum      []string
-}
-
-// PropertyTypeInteger describes an int64 value.
-type PropertyTypeInteger struct {
-	Minimum    *int64
-	Maximum    *int64
-	MultipleOf *int64
-	Enum       []int64
-}
-
-// PropertyTypeNumber describes a float64 value.
-type PropertyTypeNumber struct {
-	Minimum    *float64
-	Maximum    *float64
-	MultipleOf *float64
-	Enum       []float64
-}
-
-// PropertyTypeStructured describe a structured value.
-type PropertyTypeStructured struct {
-	TypeName string
-}
-
-// PropertyTypeArray describes an array.
-type PropertyTypeArray struct {
-	MinItems int
-	MaxItems int
-
-	TypeString     *PropertyTypeString
-	TypeInteger    *PropertyTypeInteger
-	TypeNumber     *PropertyTypeNumber
-	TypeStructured *PropertyTypeStructured
-}
-
-func newProperty(t *Type, pUST *UnprocessedStructuredType, name string) *Property {
+/*
+func newProperty(t *Type, pUST *UnprocessedDefinition, name string) *Property {
 	p := &Property{
 		Name: name,
 	}
@@ -129,3 +81,4 @@ func newProperty(t *Type, pUST *UnprocessedStructuredType, name string) *Propert
 
 	return p
 }
+*/
