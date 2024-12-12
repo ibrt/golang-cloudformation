@@ -246,9 +246,7 @@ func (ud *UnprocessedDefinition) toProperty(
 	// TODO(ibrt): Find problems.
 
 	if ud.Type == "object" && ud.Ref == nil {
-		if d := parentULTR.Definitions[name]; d != nil && !reflect.DeepEqual(d, ud) {
-			pc.Collect(plt, "object property collision: '%v'", name)
-		} else {
+		if d := parentULTR.Definitions[name]; d == nil || reflect.DeepEqual(d, ud) {
 			parentULTR.Definitions[name] = ud
 			ref := fmt.Sprintf("#/definitions/%v", name)
 			return (&UnprocessedDefinition{Ref: memz.Ptr(ref)}).toProperty(pc, plt, parentULTR, name)
@@ -271,7 +269,6 @@ func (ud *UnprocessedDefinition) toValidation(
 	if ud.Ref != nil {
 		ref, err := parseRef(*ud.Ref)
 		if err != nil {
-			pc.Collect(plt, err.Error())
 			return nil
 		}
 
@@ -279,7 +276,6 @@ func (ud *UnprocessedDefinition) toValidation(
 		refUD := parentULTR.Definitions[ref]
 
 		if refUD == nil {
-			pc.Collect(plt, "missing definition: '%v'", ref)
 			return nil
 		}
 
@@ -296,21 +292,15 @@ func (ud *UnprocessedDefinition) toValidation(
 		return refUD.toValidation(pc, plt, parentULTR)
 	}
 
-	if ud.Type == "object" {
-		pc.Collect(plt, "unexpected Type: '%v'", ud.Type)
-		return nil
-	}
-
 	if ud.Type == "string" {
 		pc.MaybeCollect(plt, ud.MinLength != nil && *ud.MinLength < 0, "invalid MinLength")
 		pc.MaybeCollect(plt, ud.MaxLength != nil && *ud.MaxLength < 0, "invalid MaxLength")
-		pc.MaybeCollect(plt, ud.Pattern != nil && *ud.Pattern == "", "invalid Pattern")
 		pc.MaybeCollect(plt, ud.Enum.IsSet() && !ud.Enum.CanBeString(), "invalid Enum")
 
 		vs := &ValidationString{
 			MinLength: ud.MinLength,
 			MaxLength: ud.MaxLength,
-			Pattern:   ud.Pattern,
+			Pattern:   memz.PtrZeroToNil(memz.ValNilToZero(ud.Pattern)),
 			Enum:      ud.Enum.MaybeString(),
 		}
 
@@ -377,20 +367,6 @@ func (ud *UnprocessedDefinition) toValidation(
 			Array: va,
 		}
 	}
-
-	/*
-		Type: <nil>
-		Type: [boolean null]
-		Type: [boolean string]
-		Type: [integer string]
-		Type: [number string]
-		Type: [object string]
-		Type: [string array]
-		Type: [string object]
-		Type: array
-		Type: boolean
-		Type: object
-	*/
 
 	return nil
 }

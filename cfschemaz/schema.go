@@ -80,10 +80,7 @@ func (s *Schema) process() error {
 
 		tlr, sts, err := utlr.toTypes(plt.WithPathElements(fmt.Sprintf("fileName[%v]", fileName)))
 		if err != nil {
-			fmt.Println("Problems:", fileName)
-			fmt.Println(errorz.SDump(err))
-			continue
-			// return errorz.Wrap(err, errorz.Errorf(fileName))
+			return errorz.Wrap(err, errorz.Errorf(fileName))
 		}
 
 		s.TopLevelResourceTypes[tlr.Name] = tlr
@@ -95,35 +92,3 @@ func (s *Schema) process() error {
 
 	return nil
 }
-
-/*
-func (s *Schema) collectProblems() error {
-	pc := cfz.NewProblemsCollector()
-	plt := cfz.NewProblemLocationTracker("schema")
-
-	for fileName, utlr := range s.UnprocessedByFileName {
-		utlr.collectProblems(pc, plt.WithPathElements(fmt.Sprintf("topLevelResource[%v]", fileName)))
-	}
-
-	return errorz.MaybeWrap(pc.ToError())
-}
-
-func (s *Schema) process() {
-	for _, utlr := range s.UnprocessedByFileName {
-		tlr, sts := utlr.toTypes(s)
-		s.TopLevelResourceTypes[tlr.Name] = tlr
-
-		for _, st := range sts {
-			s.StructuredTypes[st.Name] = st
-		}
-	}
-
-	for _, t := range s.StructuredTypes {
-		t.process()
-	}
-
-	for _, t := range s.TopLevelResourceTypes {
-		t.process()
-	}
-}
-*/

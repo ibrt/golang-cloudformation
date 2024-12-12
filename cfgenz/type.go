@@ -1,7 +1,6 @@
 package cfgenz
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,14 +24,6 @@ type Type struct {
 }
 
 func newType(g *Generator, specT *cfspecz.Type, schemaT *cfschemaz.Type) *Type {
-	if schemaT == nil {
-		if specT.IsTopLevelResourceType {
-			fmt.Println("TopLevelResourceType:", specT.Name)
-		} else {
-			fmt.Println("StructuredType:", specT.Name)
-		}
-	}
-
 	t := &Type{
 		g:       g,
 		specT:   specT,
