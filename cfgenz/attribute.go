@@ -10,92 +10,92 @@ import (
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
 
-// GeneratorAttribute describes an attribute of a top-level resource type in the generator spec.
-type GeneratorAttribute struct {
-	parent         *GeneratorType
-	mustLookupType func(unqualifiedStructuredTypeName string) *GeneratorType
-	a              *cfspecz.Attribute
+// Attribute describes an attribute of a top-level resource type.
+type Attribute struct {
+	parent         *Type
+	mustLookupType func(unqualifiedStructuredTypeName string) *Type
+	specA          *cfspecz.Attribute
 }
 
-func newGeneratorAttribute(gt *GeneratorType, a *cfspecz.Attribute) *GeneratorAttribute {
-	return &GeneratorAttribute{
-		parent:         gt,
-		mustLookupType: gt.spec.makeMustLookupType(gt, a),
-		a:              a,
+func newAttribute(t *Type, specA *cfspecz.Attribute) *Attribute {
+	return &Attribute{
+		parent:         t,
+		mustLookupType: t.g.makeMustLookupType(t, specA),
+		specA:          specA,
 	}
 }
 
 // GoName returns the Go name for this attribute.
-func (ga *GeneratorAttribute) GoName() string {
-	s := []rune(strings.ReplaceAll(ga.a.Name, ".", "_"))
+func (a *Attribute) GoName() string {
+	s := []rune(strings.ReplaceAll(a.specA.Name, ".", "_"))
 	s[0] = unicode.ToTitle(s[0])
 	return string(s)
 }
 
 // GoType returns the Go type for this attribute.
-func (ga *GeneratorAttribute) GoType() string {
-	return ga.goType(nil)
+func (a *Attribute) GoType() string {
+	return a.goType(nil)
 }
 
 // GoGenericType returns the Go generic type for this attribute.
-func (ga *GeneratorAttribute) GoGenericType() string {
-	return ga.goGenericType(nil)
+func (a *Attribute) GoGenericType() string {
+	return a.goGenericType(nil)
 }
 
 // SupportGetAttFunctionName returns the GetAtt* support function to use for this attribute.
-func (ga *GeneratorAttribute) SupportGetAttFunctionName() string {
-	return memz.Ternary(ga.a.Type == "List", "GetAttSlice", "GetAtt")
+func (a *Attribute) SupportGetAttFunctionName() string {
+	return memz.Ternary(a.specA.Type == "List", "GetAttSlice", "GetAtt")
 }
 
 // SupportOutputFunctionName returns the *Output* support function to use for this attribute.
-func (ga *GeneratorAttribute) SupportOutputFunctionName() string {
-	return memz.Ternary(ga.a.Type == "List", "OutputSlice", "Output")
+func (a *Attribute) SupportOutputFunctionName() string {
+	return memz.Ternary(a.specA.Type == "List", "OutputSlice", "Output")
 }
 
 // NameForLogicalNames returns the name for this attribute modified so that it can be embedded in logical names.
-func (ga *GeneratorAttribute) NameForLogicalNames() string {
-	return strings.ReplaceAll(ga.a.Name, ".", "")
+func (a *Attribute) NameForLogicalNames() string {
+	return strings.ReplaceAll(a.specA.Name, ".", "")
 }
 
 // Name returns the CloudFormation name for this attribute.
-func (ga *GeneratorAttribute) Name() string {
-	return ga.a.Name
+func (a *Attribute) Name() string {
+	return a.specA.Name
 }
 
-func (ga *GeneratorAttribute) goType(ic *importsCollector) string {
-	if ga.a.Type == "List" {
-		return ga.parent.spec.o.getGoSupportType(ic,
-			fmt.Sprintf("ExpressionSlice[%v]", ga.goGenericType(ic)))
+func (a *Attribute) goType(ic *importsCollector) string {
+	if a.specA.Type == "List" {
+		return a.parent.g.o.getGoSupportType(ic,
+			fmt.Sprintf("ExpressionSlice[%v]", a.goGenericType(ic)))
 	}
 
-	return ga.parent.spec.o.getGoSupportType(ic,
-		fmt.Sprintf("Expression[%v]", ga.goGenericType(ic)))
+	return a.parent.g.o.getGoSupportType(ic,
+		fmt.Sprintf("Expression[%v]", a.goGenericType(ic)))
 }
 
-func (ga *GeneratorAttribute) goGenericType(ic *importsCollector) string {
-	if ga.a.PrimitiveType != "" {
-		return ga.parent.spec.getPrimitiveGoType(ic, ga.a.PrimitiveType)
+func (a *Attribute) goGenericType(ic *importsCollector) string {
+	if a.specA.PrimitiveType != "" {
+		return a.parent.g.getPrimitiveGoType(ic, a.specA.PrimitiveType)
 	}
 
-	if ga.a.Type == "List" {
-		if ga.a.PrimitiveItemType != "" {
-			return ga.parent.spec.getPrimitiveGoType(ic, ga.a.PrimitiveItemType)
+	if a.specA.Type == "List" {
+		if a.specA.PrimitiveItemType != "" {
+			return a.parent.g.getPrimitiveGoType(ic, a.specA.PrimitiveItemType)
 		}
 
-		if ga.a.ItemType == "Tag" {
-			return ga.parent.spec.o.getGoSupportType(ic, "Tag")
+		if a.specA.ItemType == "Tag" {
+			return a.parent.g.o.getGoSupportType(ic, "Tag")
 		}
 
-		return ga.mustLookupType(ga.a.ItemType).GoName()
+		return a.mustLookupType(a.specA.ItemType).GoName()
 	}
 
-	if ga.a.Type == "Tag" {
-		return ga.parent.spec.o.getGoSupportType(ic, "Tag")
+	if a.specA.Type == "Tag" {
+		return a.parent.g.o.getGoSupportType(ic, "Tag")
 	}
 
-	return ga.mustLookupType(ga.a.Type).GoName()
+	return a.mustLookupType(a.specA.Type).GoName()
 }
 
-func (ga *GeneratorAttribute) collectImports(ic *importsCollector) {
-	ga.goType(ic)
+func (a *Attribute) collectImports(ic *importsCollector) {
+	a.goType(ic)
 }

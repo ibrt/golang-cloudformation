@@ -66,8 +66,7 @@ var (
 )
 {{ end }}
 
-// {{ .GoName }} is a binding for {{ .Name }}.
-// See: {{ .DocumentationURL }}
+{{ .GoComment }}
 type {{ .GoName }} struct {
     {{- if .IsTopLevelResourceType -}}
         // __LogicalName is the CloudFormation logical name for this resource in the template.

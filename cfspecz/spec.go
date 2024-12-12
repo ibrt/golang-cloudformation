@@ -6,25 +6,26 @@ import (
 
 	"github.com/Jeffail/gabs/v2"
 	"github.com/ibrt/golang-utils/errorz"
+
+	"github.com/ibrt/golang-cloudformation/cfz"
 )
 
 const (
 	specDisplayPath = "spec"
 )
 
-// SpecContext describes a place in the spec (i.e. spec, type, property, or attribute).
-type SpecContext interface {
-	GetDisplayPath() string
-}
+var (
+	_ cfz.ProblemLocation = (*Property)(nil)
+)
 
 // Spec describes the CloudFormation spec.
 type Spec struct {
 	ResourceSpecificationVersion string
-	ResourceTypes                map[string]*Type
-	PropertyTypes                map[string]*Type
+	TopLevelResourceTypes        map[string]*Type `json:"ResourceTypes"`
+	StructuredTypes              map[string]*Type `json:"PropertyTypes"`
 }
 
-// NewSpecFromBuffer parses, patches (using the given spec patch manager), and validates a CloudFormation spec from the
+// NewSpecFromBuffer parses, patches (using the given patch manager), and validates a CloudFormation spec from the
 // given buffer (i.e. "CloudFormationResourceSpecification.json" file).
 func NewSpecFromBuffer(buf []byte, pm *PatchManager) (*Spec, error) {
 	d := json.NewDecoder(bytes.NewReader(buf))
@@ -42,76 +43,75 @@ func NewSpecFromBuffer(buf []byte, pm *PatchManager) (*Spec, error) {
 
 	d = json.NewDecoder(bytes.NewReader(rawSpec.EncodeJSON()))
 	d.DisallowUnknownFields()
-	d.UseNumber()
 
-	var spec *Spec
+	var s *Spec
 
-	if err := d.Decode(&spec); err != nil {
+	if err := d.Decode(&s); err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
-	spec.preProcess()
+	s.preProcess()
 
-	if err := spec.applyPatches(pm); err != nil {
+	if err := s.applyPatches(pm); err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
-	if err := spec.collectIssues(); err != nil {
+	if err := s.collectProblems(); err != nil {
 		return nil, errorz.Wrap(err)
 	}
 
-	return spec, nil
+	return s, nil
 }
 
-// GetDisplayPath implements the SpecContext interface.
+// GetDisplayPath implements the ProblemLocation interface.
 func (*Spec) GetDisplayPath() string {
 	return specDisplayPath
 }
 
 func (s *Spec) preProcess() {
-	for resourceTypeName, resourceType := range s.ResourceTypes {
-		resourceType.preProcess(s, true, resourceTypeName)
+	for name, t := range s.TopLevelResourceTypes {
+		t.preProcess(s, true, name)
 	}
 
-	for propertyTypeName, propertyType := range s.PropertyTypes {
-		propertyType.preProcess(s, false, propertyTypeName)
+	for name, t := range s.StructuredTypes {
+		t.preProcess(s, false, name)
 	}
 }
 
 func (s *Spec) applyPatches(pm *PatchManager) error {
-	ic := NewSpecIssueCollector()
-	pm.applySpecPatches(ic, s)
+	pc := cfz.NewProblemsCollector()
+	pm.applySpecPatches(pc, s)
 
-	for _, resourceType := range s.ResourceTypes {
-		resourceType.applyPatches(ic, pm)
+	for _, t := range s.TopLevelResourceTypes {
+		t.applyPatches(pc, pm)
 	}
 
-	for _, propertyType := range s.PropertyTypes {
-		propertyType.applyPatches(ic, pm)
+	for _, t := range s.StructuredTypes {
+		t.applyPatches(pc, pm)
 	}
 
-	return ic.MaybeToError()
+	return errorz.MaybeWrap(pc.ToError())
 }
 
-func (s *Spec) collectIssues() error {
-	ic := NewSpecIssueCollector()
+func (s *Spec) collectProblems() error {
+	pc := cfz.NewProblemsCollector()
 
 	if s.ResourceSpecificationVersion == "" {
-		ic.CollectIssue(s, "missing ResourceSpecificationVersion")
-		return ic.MaybeToError()
+		pc.Collect(s, "missing ResourceSpecificationVersion")
+		return pc.ToError()
 	}
 
-	for _, resourceType := range s.ResourceTypes {
-		resourceType.collectIssues(ic)
+	for _, t := range s.TopLevelResourceTypes {
+		t.collectProblems(pc)
 	}
 
-	for _, propertyType := range s.PropertyTypes {
-		propertyType.collectIssues(ic)
+	for _, t := range s.StructuredTypes {
+		t.collectProblems(pc)
 	}
 
-	for _, propertyType := range s.PropertyTypes {
-		ic.MaybeCollectIssue(propertyType, !propertyType.IsReferenced, "unreferenced structured type")
+	for _, t := range s.StructuredTypes {
+		pc.MaybeCollect(t, !t.IsReferenced, "unreferenced structured type")
 	}
 
-	return ic.MaybeToError()
+	return errorz.MaybeWrap(pc.ToError())
 }

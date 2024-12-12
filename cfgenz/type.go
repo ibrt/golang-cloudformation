@@ -9,75 +9,86 @@ import (
 	"github.com/ibrt/golang-utils/memz"
 	"github.com/ibrt/golang-utils/tplz"
 
+	"github.com/ibrt/golang-cloudformation/cfschemaz"
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
 
-// GeneratorType describes either a top-level resource type or a structured type in the generator spec.
-type GeneratorType struct {
-	Attributes map[string]*GeneratorAttribute
-	Properties map[string]*GeneratorProperty
+// Type describes either a top-level resource type or a structured type,
+type Type struct {
+	Attributes map[string]*Attribute
+	Properties map[string]*Property
 
-	spec *GeneratorSpec
-	t    *cfspecz.Type
+	g       *Generator
+	specT   *cfspecz.Type
+	schemaT *cfschemaz.Type
 }
 
-func newGeneratorType(gs *GeneratorSpec, t *cfspecz.Type) *GeneratorType {
-	gt := &GeneratorType{
-		spec: gs,
-		t:    t,
+func newType(g *Generator, specT *cfspecz.Type, schemaT *cfschemaz.Type) *Type {
+	t := &Type{
+		g:       g,
+		specT:   specT,
+		schemaT: schemaT,
 	}
 
-	gt.Attributes = memz.TransformMapValues(t.Attributes, func(_ string, a *cfspecz.Attribute) *GeneratorAttribute {
-		return newGeneratorAttribute(gt, a)
+	t.Attributes = memz.TransformMapValues(specT.Attributes, func(_ string, specA *cfspecz.Attribute) *Attribute {
+		return newAttribute(t, specA)
 	})
 
-	gt.Properties = memz.TransformMapValues(t.Properties, func(_ string, p *cfspecz.Property) *GeneratorProperty {
-		return newGeneratorProperty(gt, p)
+	t.Properties = memz.TransformMapValues(specT.Properties, func(_ string, specP *cfspecz.Property) *Property {
+		return newProperty(t, specP)
 	})
 
-	return gt
+	return t
 }
 
 // GetRelatedTopLevelResourceTypeName returns the top-level resource type name related to this type, that is, Name if
 // IsTopLevelResourceType = true, or the portion of Name before the first "." otherwise.
-func (gt *GeneratorType) GetRelatedTopLevelResourceTypeName() string {
-	return gt.t.GetRelatedTopLevelResourceTypeName()
+func (t *Type) GetRelatedTopLevelResourceTypeName() string {
+	return t.specT.GetRelatedTopLevelResourceTypeName()
 }
 
 // GetRelatedStructuredTypeName converts the value of a Type or ItemType field of a property or attribute in this type
 // to its fully qualified structured type name.
-func (gt *GeneratorType) GetRelatedStructuredTypeName(unqualifiedStructuredTypeName string) string {
-	return gt.t.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)
+func (t *Type) GetRelatedStructuredTypeName(unqualifiedStructuredTypeName string) string {
+	return t.specT.GetRelatedStructuredTypeName(unqualifiedStructuredTypeName)
 }
 
 // GoName returns the Go name for this type.
-func (gt *GeneratorType) GoName() string {
-	structName := strings.ReplaceAll(gt.t.Name, "::", "_")
+func (t *Type) GoName() string {
+	structName := strings.ReplaceAll(t.specT.Name, "::", "_")
 	return strings.ReplaceAll(structName, ".", "_")
 }
 
+// GoComment returns a Go comment for this type.
+func (t *Type) GoComment() string {
+	return NewComment().
+		AddLinef("%v is a binding for %v.", t.GoName(), t.Name()).
+		MaybeAddLink("Documentation", t.specT.Documentation).
+		String()
+}
+
 // GoPackageName returns the Go package name for this type.
-func (gt *GeneratorType) GoPackageName() string {
+func (t *Type) GoPackageName() string {
 	return strings.ToLower(strings.Join(
-		strings.Split(gt.GetRelatedTopLevelResourceTypeName(), "::")[0:2],
+		strings.Split(t.GetRelatedTopLevelResourceTypeName(), "::")[0:2],
 		"_"))
 }
 
 // GoFileName returns the Go file name for this type.
-func (gt *GeneratorType) GoFileName() string {
-	return strings.ToLower(gt.GoName()) + ".go"
+func (t *Type) GoFileName() string {
+	return strings.ToLower(t.GoName()) + ".go"
 }
 
 // GoImports returns the Go imports for this type.
-func (gt *GeneratorType) GoImports() []string {
+func (t *Type) GoImports() []string {
 	ic := newImportsCollector()
-	ic.collectImports(gt.spec.o.TypeTemplateGetImplicitGoImports(gt)...)
+	ic.collectImports(t.g.o.TypeTemplateGetImplicitGoImports(t)...)
 
-	for _, ga := range gt.Attributes {
+	for _, ga := range t.Attributes {
 		ga.collectImports(ic)
 	}
 
-	for _, gp := range gt.Properties {
+	for _, gp := range t.Properties {
 		gp.collectImports(ic)
 	}
 
@@ -85,35 +96,30 @@ func (gt *GeneratorType) GoImports() []string {
 }
 
 // GoSupportBasePackage returns the base package for the support library.
-func (gt *GeneratorType) GoSupportBasePackage() string {
-	return gt.spec.o.getGoSupportBasePackage()
-}
-
-// DocumentationURL returns the documentation URL for this type.
-func (gt *GeneratorType) DocumentationURL() string {
-	return gt.t.Documentation
+func (t *Type) GoSupportBasePackage() string {
+	return t.g.o.getGoSupportBasePackage()
 }
 
 // IsTopLevelResourceType returns true if this is a top-level resource type, false if it is a structured type.
-func (gt *GeneratorType) IsTopLevelResourceType() bool {
-	return gt.t.IsTopLevelResourceType
+func (t *Type) IsTopLevelResourceType() bool {
+	return t.specT.IsTopLevelResourceType
 }
 
 // Name returns the CloudFormation name for this type.
-func (gt *GeneratorType) Name() string {
-	return gt.t.Name
+func (t *Type) Name() string {
+	return t.specT.Name
 }
 
-func (gt *GeneratorType) generate(outDirPath string) error {
-	buf, err := tplz.ExecuteGo(gt.spec.o.TypeTemplate, gt)
+func (t *Type) generate(outDirPath string) error {
+	buf, err := tplz.ExecuteGo(t.g.o.TypeTemplate, t)
 	if err != nil {
 		return errorz.Wrap(err)
 	}
 
-	outDirPath = filepath.Join(outDirPath, gt.GoPackageName())
+	outDirPath = filepath.Join(outDirPath, t.GoPackageName())
 	if err := os.MkdirAll(outDirPath, 0777); err != nil {
 		return errorz.Wrap(err)
 	}
 
-	return errorz.MaybeWrap(os.WriteFile(filepath.Join(outDirPath, gt.GoFileName()), buf, 0666))
+	return errorz.MaybeWrap(os.WriteFile(filepath.Join(outDirPath, t.GoFileName()), buf, 0666))
 }

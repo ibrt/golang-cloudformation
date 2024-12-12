@@ -9,6 +9,8 @@ import (
 	"github.com/ibrt/golang-utils/errorz"
 	"github.com/ibrt/golang-utils/jsonz"
 	"github.com/ibrt/golang-utils/memz"
+
+	"github.com/ibrt/golang-cloudformation/cfz"
 )
 
 // RawPatch describes a patch applicable to the raw spec (i.e. before parsing into structs).
@@ -26,27 +28,27 @@ func (f RawPatchFunc) Apply(rawSpec *gabs.Container) error {
 
 // SpecPatch describes a patch applicable to a spec.
 type SpecPatch interface {
-	Apply(ic *SpecIssueCollector, s *Spec)
+	Apply(ic *cfz.ProblemsCollector, s *Spec)
 }
 
 // SpecPatchFunc is a func shorthand for SpecPatch.
-type SpecPatchFunc func(ic *SpecIssueCollector, s *Spec)
+type SpecPatchFunc func(ic *cfz.ProblemsCollector, s *Spec)
 
 // Apply implements the SpecPatch interface.
-func (f SpecPatchFunc) Apply(ic *SpecIssueCollector, s *Spec) {
+func (f SpecPatchFunc) Apply(ic *cfz.ProblemsCollector, s *Spec) {
 	f(ic, s)
 }
 
 // TypePatch describes a patch applicable to a type.
 type TypePatch interface {
-	Apply(ic *SpecIssueCollector, t *Type)
+	Apply(ic *cfz.ProblemsCollector, t *Type)
 }
 
 // TypePatchFunc is a func shorthand for TypePatch.
-type TypePatchFunc func(ic *SpecIssueCollector, t *Type)
+type TypePatchFunc func(ic *cfz.ProblemsCollector, t *Type)
 
 // Apply implements the SpecPatch interface.
-func (f TypePatchFunc) Apply(ic *SpecIssueCollector, t *Type) {
+func (f TypePatchFunc) Apply(ic *cfz.ProblemsCollector, t *Type) {
 	f(ic, t)
 }
 
@@ -96,13 +98,13 @@ func (m *PatchManager) applyRawPatches(raw *gabs.Container) error {
 	return nil
 }
 
-func (m *PatchManager) applySpecPatches(ic *SpecIssueCollector, s *Spec) {
+func (m *PatchManager) applySpecPatches(ic *cfz.ProblemsCollector, s *Spec) {
 	for _, patch := range m.specPatches {
 		patch.Apply(ic, s)
 	}
 }
 
-func (m *PatchManager) applyTypePatches(ic *SpecIssueCollector, t *Type) {
+func (m *PatchManager) applyTypePatches(ic *cfz.ProblemsCollector, t *Type) {
 	for _, patch := range m.typePatches[t.Name] {
 		patch.Apply(ic, t)
 	}
@@ -208,20 +210,20 @@ type SpecPatchDeleteType struct {
 }
 
 // Apply implements the SpecPatch interface.
-func (p *SpecPatchDeleteType) Apply(ic *SpecIssueCollector, s *Spec) {
+func (p *SpecPatchDeleteType) Apply(ic *cfz.ProblemsCollector, s *Spec) {
 	if strings.Contains(p.TypeName, ".") || memz.ValNilToZero(p.ForceIsStructuredType) {
-		if _, ok := s.PropertyTypes[p.TypeName]; ok {
-			delete(s.PropertyTypes, p.TypeName)
+		if _, ok := s.StructuredTypes[p.TypeName]; ok {
+			delete(s.StructuredTypes, p.TypeName)
 			return
 		}
 	} else {
-		if _, ok := s.ResourceTypes[p.TypeName]; ok {
-			delete(s.ResourceTypes, p.TypeName)
+		if _, ok := s.TopLevelResourceTypes[p.TypeName]; ok {
+			delete(s.TopLevelResourceTypes, p.TypeName)
 			return
 		}
 	}
 
-	ic.CollectIssue(s, "delete type spec patch: missing type: '%v'", p.TypeName)
+	ic.Collect(s, "delete type spec patch: missing type: '%v'", p.TypeName)
 }
 
 // TypePatchDeleteAttribute implements a category of type patches.
@@ -231,10 +233,10 @@ type TypePatchDeleteAttribute struct {
 }
 
 // Apply implements the TypePatch interface.
-func (p *TypePatchDeleteAttribute) Apply(ic *SpecIssueCollector, t *Type) {
+func (p *TypePatchDeleteAttribute) Apply(ic *cfz.ProblemsCollector, t *Type) {
 	a, ok := t.Attributes[p.AttributeName]
 	if !ok {
-		ic.CollectIssue(t, "delete attribute type patch: missing attribute: '%v'", p.AttributeName)
+		ic.Collect(t, "delete attribute type patch: missing attribute: '%v'", p.AttributeName)
 		return
 	}
 
@@ -242,25 +244,25 @@ func (p *TypePatchDeleteAttribute) Apply(ic *SpecIssueCollector, t *Type) {
 
 	if p.ExpectedFields.PrimitiveType != a.PrimitiveType {
 		isMatching = false
-		ic.CollectIssue(t, "delete attribute type patch: unexpected value for PrimitiveType: expected '%v', got '%v'",
+		ic.Collect(t, "delete attribute type patch: unexpected value for PrimitiveType: expected '%v', got '%v'",
 			p.ExpectedFields.PrimitiveType, a.PrimitiveType)
 	}
 
 	if p.ExpectedFields.Type != a.Type {
 		isMatching = false
-		ic.CollectIssue(t, "delete attribute type patch: unexpected value for Type: expected '%v', got '%v'",
+		ic.Collect(t, "delete attribute type patch: unexpected value for Type: expected '%v', got '%v'",
 			p.ExpectedFields.Type, a.Type)
 	}
 
 	if p.ExpectedFields.PrimitiveItemType != a.PrimitiveItemType {
 		isMatching = false
-		ic.CollectIssue(t, "delete attribute type patch: unexpected value for PrimitiveItemType: expected '%v', got '%v'",
+		ic.Collect(t, "delete attribute type patch: unexpected value for PrimitiveItemType: expected '%v', got '%v'",
 			p.ExpectedFields.PrimitiveItemType, a.PrimitiveItemType)
 	}
 
 	if p.ExpectedFields.ItemType != a.ItemType {
 		isMatching = false
-		ic.CollectIssue(t, "delete attribute type patch: unexpected value for ItemType: expected '%v', got '%v'",
+		ic.Collect(t, "delete attribute type patch: unexpected value for ItemType: expected '%v', got '%v'",
 			p.ExpectedFields.ItemType, a.ItemType)
 	}
 

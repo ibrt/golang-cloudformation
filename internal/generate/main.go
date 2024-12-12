@@ -10,11 +10,13 @@ import (
 	"github.com/ibrt/golang-utils/ioz"
 
 	"github.com/ibrt/golang-cloudformation/cfgenz"
+	"github.com/ibrt/golang-cloudformation/cfschemaz"
 	"github.com/ibrt/golang-cloudformation/cfspecz"
 )
 
 const (
-	specURL = "https://d1uauaxba7bl26.cloudfront.net/latest/gzip/CloudFormationResourceSpecification.json"
+	specURL   = "https://d1uauaxba7bl26.cloudfront.net/latest/gzip/CloudFormationResourceSpecification.json"
+	schemaURL = "https://schema.cloudformation.us-east-1.amazonaws.com/CloudformationSchema.zip"
 )
 
 func main() {
@@ -36,9 +38,20 @@ func main() {
 	filez.MustWriteFile(specFilePath, 0777, 0666, ioz.MustReadAllAndClose(resp.Body))
 
 	fmt.Println("Parsing and validating CloudFormation spec...")
-	s, err := cfspecz.NewSpecFromBuffer(filez.MustReadFile(specFilePath), cfspecz.NewDefaultPatchManager())
+	spec, err := cfspecz.NewSpecFromBuffer(filez.MustReadFile(specFilePath), cfspecz.NewDefaultPatchManager())
 	errorz.MaybeMustWrap(err)
 
-	gs := cfgenz.NewGeneratorSpec(cfgenz.NewDefaultGeneratorSpecOptions(), s)
-	errorz.MaybeMustWrap(gs.Generate(filez.MustAbs(filepath.Join("cfz", "gen"))))
+	fmt.Println("Downloading CloudFormation schema...")
+	schemaFilePath := filepath.Join(tmpDirPath, "CloudFormationSchema.zip")
+	resp, err = http.Get(schemaURL)
+	errorz.MaybeMustWrap(err)
+	errorz.Assertf(resp.StatusCode == http.StatusOK, "unexpected status code: %v", resp.StatusCode)
+	filez.MustWriteFile(schemaFilePath, 0777, 0666, ioz.MustReadAllAndClose(resp.Body))
+
+	fmt.Println("Parsing and validating CloudFormation schema...")
+	schema, err := cfschemaz.NewSchemaFromBuffer(filez.MustReadFile(schemaFilePath))
+	errorz.MaybeMustWrap(err)
+
+	g := cfgenz.NewGenerator(cfgenz.NewDefaultGeneratorOptions(), spec, schema)
+	errorz.MaybeMustWrap(g.Generate(filez.MustAbs(filepath.Join("cfz", "gen"))))
 }
