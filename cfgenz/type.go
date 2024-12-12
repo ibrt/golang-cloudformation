@@ -18,16 +18,14 @@ type Type struct {
 	Attributes map[string]*Attribute
 	Properties map[string]*Property
 
-	g       *Generator
-	specT   *cfspecz.Type
-	schemaR *cfschemaz.Resource
+	g     *Generator
+	specT *cfspecz.Type
 }
 
-func newType(g *Generator, specT *cfspecz.Type, schemaR *cfschemaz.Resource) *Type {
+func newType(g *Generator, schema *cfschemaz.Schema, specT *cfspecz.Type) *Type {
 	t := &Type{
-		g:       g,
-		specT:   specT,
-		schemaR: schemaR,
+		g:     g,
+		specT: specT,
 	}
 
 	t.Attributes = memz.TransformMapValues(specT.Attributes, func(_ string, specA *cfspecz.Attribute) *Attribute {
@@ -35,7 +33,7 @@ func newType(g *Generator, specT *cfspecz.Type, schemaR *cfschemaz.Resource) *Ty
 	})
 
 	t.Properties = memz.TransformMapValues(specT.Properties, func(_ string, specP *cfspecz.Property) *Property {
-		return newProperty(t, specP)
+		return newProperty(schema, t, specP)
 	})
 
 	return t

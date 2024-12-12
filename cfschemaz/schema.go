@@ -65,6 +65,10 @@ func parseResource(f *zip.File) (utlr *Resource, err error) {
 
 // MaybeGetValidation returns the validation information for a given property, if possible.
 func (s *Schema) MaybeGetValidation(pc *cfz.ProblemsCollector, specT *cfspecz.Type, specP *cfspecz.Property) *cfz.Validation {
+	if s == nil {
+		return nil
+	}
+
 	plt := cfz.NewProblemLocationTracker("schema")
 	rName := specT.GetRelatedTopLevelResourceTypeName()
 	r := s.Resources[rName]

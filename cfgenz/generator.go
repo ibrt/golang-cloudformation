@@ -61,6 +61,7 @@ type Generator struct {
 	TopLevelResourceTypes map[string]*Type
 	StructuredTypes       map[string]*Type
 
+	pc     *cfz.ProblemsCollector
 	o      *GeneratorOptions
 	spec   *cfspecz.Spec
 	schema *cfschemaz.Schema
@@ -69,6 +70,7 @@ type Generator struct {
 // NewGenerator initializes a new generator.
 func NewGenerator(o *GeneratorOptions, spec *cfspecz.Spec, schema *cfschemaz.Schema) *Generator {
 	g := &Generator{
+		pc:     cfz.NewProblemsCollector(),
 		o:      o,
 		spec:   spec,
 		schema: schema,
@@ -77,13 +79,13 @@ func NewGenerator(o *GeneratorOptions, spec *cfspecz.Spec, schema *cfschemaz.Sch
 	g.TopLevelResourceTypes = memz.TransformMapValues(
 		spec.TopLevelResourceTypes,
 		func(_ string, specT *cfspecz.Type) *Type {
-			return newType(g, specT, schema.Resources[specT.Name])
+			return newType(g, schema, specT)
 		})
 
 	g.StructuredTypes = memz.TransformMapValues(
 		spec.StructuredTypes,
 		func(_ string, specT *cfspecz.Type) *Type {
-			return newType(g, specT, schema.Resources[specT.Name])
+			return newType(g, schema, specT)
 		})
 
 	return g

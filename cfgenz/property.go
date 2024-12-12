@@ -5,7 +5,9 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/ibrt/golang-cloudformation/cfschemaz"
 	"github.com/ibrt/golang-cloudformation/cfspecz"
+	"github.com/ibrt/golang-cloudformation/cfz"
 )
 
 // Property describes a property of either a top-level resource or structured type.
@@ -13,13 +15,15 @@ type Property struct {
 	parent         *Type
 	mustLookupType func(unqualifiedStructuredTypeName string) *Type
 	specP          *cfspecz.Property
+	validation     *cfz.Validation
 }
 
-func newProperty(t *Type, specP *cfspecz.Property) *Property {
+func newProperty(schema *cfschemaz.Schema, t *Type, specP *cfspecz.Property) *Property {
 	return &Property{
 		parent:         t,
 		mustLookupType: t.g.makeMustLookupType(t, specP),
 		specP:          specP,
+		validation:     schema.MaybeGetValidation(t.g.pc, t.specT, specP),
 	}
 }
 
