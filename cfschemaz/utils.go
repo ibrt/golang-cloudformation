@@ -2,7 +2,6 @@ package cfschemaz
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/ibrt/golang-utils/errorz"
 	"github.com/ibrt/golang-utils/jsonz"
@@ -131,12 +130,6 @@ func canJSONNumberBeFloat64(n json.Number) bool {
 	return err == nil
 }
 
-func mustJSONNumberFloat64(n json.Number) float64 {
-	f, err := n.Float64()
-	errorz.MaybeMustWrap(err)
-	return f
-}
-
 func maybeJSONNumberPtrFloat64(n *json.Number) *float64 {
 	if n != nil {
 		if f, err := n.Float64(); err == nil {
@@ -151,12 +144,6 @@ func canJSONNumberBeInt64(n json.Number) bool {
 	return err == nil
 }
 
-func mustJSONNumberInt64(n json.Number) int64 {
-	i, err := n.Int64()
-	errorz.MaybeMustWrap(err)
-	return i
-}
-
 func maybeJSONNumberPtrInt64(n *json.Number) *int64 {
 	if n != nil {
 		if i, err := n.Int64(); err == nil {
@@ -164,18 +151,4 @@ func maybeJSONNumberPtrInt64(n *json.Number) *int64 {
 		}
 	}
 	return nil
-}
-
-func parseRef(ref string) (string, error) {
-	if !strings.HasPrefix(ref, "#/definitions/") {
-		return "", errorz.Errorf("unexpected $ref prefix: '%v'", ref)
-	}
-
-	ref = strings.TrimPrefix(ref, "#/definitions/")
-
-	if ref == "" {
-		return "", errorz.Errorf("empty $ref")
-	}
-
-	return ref, nil
 }

@@ -39,6 +39,14 @@ func (t *Type) GetRelatedStructuredTypeName(unqualifiedStructuredTypeName string
 	return fmt.Sprintf("%s.%s", t.GetRelatedTopLevelResourceTypeName(), unqualifiedStructuredTypeName)
 }
 
+// MaybeGetUnqualifiedStructuredTypeName returns the unqualified structured type name for this type, if possible.
+func (t *Type) MaybeGetUnqualifiedStructuredTypeName() string {
+	if t.IsTopLevelResourceType {
+		return ""
+	}
+	return strings.Split(t.Name, ".")[1]
+}
+
 // GetDisplayPath implements the ProblemLocation interface.
 func (t *Type) GetDisplayPath() string {
 	return fmt.Sprintf("%v/%v[%v]",

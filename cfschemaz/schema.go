@@ -7,6 +7,9 @@ import (
 	"fmt"
 
 	"github.com/ibrt/golang-utils/errorz"
+
+	"github.com/ibrt/golang-cloudformation/cfspecz"
+	"github.com/ibrt/golang-cloudformation/cfz"
 )
 
 // Schema describes the CloudFormation JSON schema.
@@ -58,4 +61,36 @@ func parseResource(f *zip.File) (utlr *Resource, err error) {
 	}
 
 	return utlr, nil
+}
+
+// MaybeGetValidation returns the validation information for a given property, if possible.
+func (s *Schema) MaybeGetValidation(pc *cfz.ProblemsCollector, specT *cfspecz.Type, specP *cfspecz.Property) *cfz.Validation {
+	plt := cfz.NewProblemLocationTracker("schema")
+	rName := specT.GetRelatedTopLevelResourceTypeName()
+	r := s.Resources[rName]
+
+	if r == nil {
+		pc.Collect(plt, "missing resource: '%v'", rName)
+		return nil
+	}
+
+	plt = plt.WithPathElements(fmt.Sprintf("resource[%v]", rName))
+
+	if specT.IsTopLevelResourceType {
+		return r.Properties[specP.Name].maybeGetValidation(
+			pc, plt.WithPathElements(fmt.Sprintf("property[%v]", specP.Name)), r)
+	}
+
+	dName := specT.MaybeGetUnqualifiedStructuredTypeName()
+	d := r.Definitions[dName]
+
+	if d == nil {
+		pc.Collect(plt, "missing definition: '%v'", dName)
+		return nil
+	}
+
+	plt = plt.WithPathElements(fmt.Sprintf("definition[%v]", dName))
+
+	return d.Properties[specP.Name].maybeGetValidation(
+		pc, plt.WithPathElements(fmt.Sprintf("property[%v]", specP.Name)), r)
 }
