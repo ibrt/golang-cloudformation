@@ -3,10 +3,12 @@ package cfschemaz
 import (
 	"archive/zip"
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"fmt"
 
 	"github.com/ibrt/golang-utils/errorz"
+	"github.com/ibrt/golang-utils/memz"
 
 	"github.com/ibrt/golang-cloudformation/cfz"
 )
@@ -73,10 +75,15 @@ func parseUnprocessedTopLevelResource(f *zip.File) (utlr *UnprocessedTopLevelRes
 func (s *Schema) process() error {
 	plt := cfz.NewProblemLocationTracker("schema")
 
-	for fileName, utlr := range s.UnprocessedByFileName {
-		tlr, sts, err := utlr.toTypes(plt, s)
+	for _, fileName := range memz.GetSortedMapKeys(s.UnprocessedByFileName, cmp.Less) {
+		utlr := s.UnprocessedByFileName[fileName]
+
+		tlr, sts, err := utlr.toTypes(plt.WithPathElements(fmt.Sprintf("fileName[%v]", fileName)))
 		if err != nil {
-			return errorz.Wrap(err, errorz.Errorf(fileName))
+			fmt.Println("Problems:", fileName)
+			fmt.Println(errorz.SDump(err))
+			continue
+			// return errorz.Wrap(err, errorz.Errorf(fileName))
 		}
 
 		s.TopLevelResourceTypes[tlr.Name] = tlr

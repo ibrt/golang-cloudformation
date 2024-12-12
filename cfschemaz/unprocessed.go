@@ -3,9 +3,12 @@ package cfschemaz
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/ibrt/golang-utils/errorz"
 	"github.com/ibrt/golang-utils/jsonz"
+	"github.com/ibrt/golang-utils/memz"
 
 	"github.com/ibrt/golang-cloudformation/cfz"
 )
@@ -210,31 +213,31 @@ func (ust *UnprocessedDefinition) collectProblems(pc *cfz.ProblemsCollector, plt
 }
 */
 
-func (ust *UnprocessedDefinition) toType(
+func (ud *UnprocessedDefinition) toType(
 	pc *cfz.ProblemsCollector,
 	plt *cfz.ProblemLocationTracker,
 	parentULTR *UnprocessedTopLevelResource,
 	name string,
 ) *Type {
-	if ust.Type != "object" {
+	if ud.Type != "object" {
 		return nil
 	}
 
 	t := &Type{
 		IsTopLevelResourceType: false,
 		Name:                   fmt.Sprintf("%v.%v", parentULTR.TypeName, name),
-		Description:            ust.Description,
+		Description:            ud.Description,
 		Properties:             make(map[string]*Property),
 	}
 
-	for name, ud := range ust.Properties {
+	for name, ud := range ud.Properties {
 		t.Properties[name] = ud.toProperty(pc, plt.WithPathElements(fmt.Sprintf("property[%v]", name)), parentULTR, name)
 	}
 
 	return t
 }
 
-func (ust *UnprocessedDefinition) toProperty(
+func (ud *UnprocessedDefinition) toProperty(
 	pc *cfz.ProblemsCollector,
 	plt *cfz.ProblemLocationTracker,
 	parentULTR *UnprocessedTopLevelResource,
@@ -242,30 +245,73 @@ func (ust *UnprocessedDefinition) toProperty(
 ) *Property {
 	// TODO(ibrt): Find problems.
 
+	if ud.Type == "object" && ud.Ref == nil {
+		if d := parentULTR.Definitions[name]; d != nil && !reflect.DeepEqual(d, ud) {
+			pc.Collect(plt, "object property collision: '%v'", name)
+		} else {
+			parentULTR.Definitions[name] = ud
+			ref := fmt.Sprintf("#/definitions/%v", name)
+			return (&UnprocessedDefinition{Ref: memz.Ptr(ref)}).toProperty(pc, plt, parentULTR, name)
+		}
+	}
+
 	return &Property{
 		Name:       name,
-		Validation: ust.toValidation(pc, plt, parentULTR),
+		Validation: ud.toValidation(pc, plt, parentULTR),
 	}
 }
 
-func (ust *UnprocessedDefinition) toValidation(
+func (ud *UnprocessedDefinition) toValidation(
 	pc *cfz.ProblemsCollector,
 	plt *cfz.ProblemLocationTracker,
 	parentULTR *UnprocessedTopLevelResource,
 ) *Validation {
 	// TODO(ibrt): Find problems.
 
-	if ust.Type == "string" {
-		pc.MaybeCollect(plt, ust.MinLength == nil || *ust.MinLength >= 0, "invalid MinLength")
-		pc.MaybeCollect(plt, ust.MaxLength == nil || *ust.MaxLength >= 0, "invalid MaxLength")
-		pc.MaybeCollect(plt, ust.Pattern == nil || *ust.Pattern != "", "invalid Pattern")
-		pc.MaybeCollect(plt, !ust.Enum.IsSet() || ust.Enum.CanBeString(), "invalid Enum")
+	if ud.Ref != nil {
+		ref, err := parseRef(*ud.Ref)
+		if err != nil {
+			pc.Collect(plt, err.Error())
+			return nil
+		}
+
+		plt = plt.WithPathElements(fmt.Sprintf("reference[%v]", ref))
+		refUD := parentULTR.Definitions[ref]
+
+		if refUD == nil {
+			pc.Collect(plt, "missing definition: '%v'", ref)
+			return nil
+		}
+
+		if refUD.Type == "object" {
+			return &Validation{
+				Single: &ValidationSingle{
+					Structured: &ValidationStructuredType{
+						StructuredTypeName: fmt.Sprintf("%v.%v", parentULTR.TypeName, ref),
+					},
+				},
+			}
+		}
+
+		return refUD.toValidation(pc, plt, parentULTR)
+	}
+
+	if ud.Type == "object" {
+		pc.Collect(plt, "unexpected Type: '%v'", ud.Type)
+		return nil
+	}
+
+	if ud.Type == "string" {
+		pc.MaybeCollect(plt, ud.MinLength != nil && *ud.MinLength < 0, "invalid MinLength")
+		pc.MaybeCollect(plt, ud.MaxLength != nil && *ud.MaxLength < 0, "invalid MaxLength")
+		pc.MaybeCollect(plt, ud.Pattern != nil && *ud.Pattern == "", "invalid Pattern")
+		pc.MaybeCollect(plt, ud.Enum.IsSet() && !ud.Enum.CanBeString(), "invalid Enum")
 
 		vs := &ValidationString{
-			MinLength: ust.MinLength,
-			MaxLength: ust.MaxLength,
-			Pattern:   ust.Pattern,
-			Enum:      ust.Enum.MaybeString(),
+			MinLength: ud.MinLength,
+			MaxLength: ud.MaxLength,
+			Pattern:   ud.Pattern,
+			Enum:      ud.Enum.MaybeString(),
 		}
 
 		return &Validation{
@@ -275,17 +321,17 @@ func (ust *UnprocessedDefinition) toValidation(
 		}
 	}
 
-	if ust.Type == "integer" {
-		pc.MaybeCollect(plt, ust.Minimum == nil || canJSONNumberBeInt64(*ust.Minimum), "invalid Minimum")
-		pc.MaybeCollect(plt, ust.Maximum == nil || canJSONNumberBeInt64(*ust.Maximum), "invalid Maximum")
-		pc.MaybeCollect(plt, ust.MultipleOf == nil || canJSONNumberBeInt64(*ust.MultipleOf) || mustJSONNumberInt64(*ust.MultipleOf) <= 0, "invalid MultipleOf")
-		pc.MaybeCollect(plt, !ust.Enum.IsSet() || ust.Enum.CanBeInt64(), "invalid Enum")
+	if ud.Type == "integer" {
+		pc.MaybeCollect(plt, ud.Minimum != nil && !canJSONNumberBeInt64(*ud.Minimum), "invalid Minimum")
+		pc.MaybeCollect(plt, ud.Maximum != nil && !canJSONNumberBeInt64(*ud.Maximum), "invalid Maximum")
+		pc.MaybeCollect(plt, ud.MultipleOf != nil && (!canJSONNumberBeInt64(*ud.MultipleOf) || mustJSONNumberInt64(*ud.MultipleOf) <= 0), "invalid MultipleOf")
+		pc.MaybeCollect(plt, ud.Enum.IsSet() && !ud.Enum.CanBeInt64(), "invalid Enum")
 
 		vi := &ValidationNumber[int64]{
-			Minimum:    maybeJSONNumberPtrInt64(ust.Minimum),
-			Maximum:    maybeJSONNumberPtrInt64(ust.Maximum),
-			MultipleOf: maybeJSONNumberPtrInt64(ust.MultipleOf),
-			Enum:       ust.Enum.MaybeInt64(),
+			Minimum:    maybeJSONNumberPtrInt64(ud.Minimum),
+			Maximum:    maybeJSONNumberPtrInt64(ud.Maximum),
+			MultipleOf: maybeJSONNumberPtrInt64(ud.MultipleOf),
+			Enum:       ud.Enum.MaybeInt64(),
 		}
 
 		return &Validation{
@@ -295,17 +341,17 @@ func (ust *UnprocessedDefinition) toValidation(
 		}
 	}
 
-	if ust.Type == "number" {
-		pc.MaybeCollect(plt, ust.Minimum == nil || canJSONNumberBeFloat64(*ust.Minimum), "invalid Minimum")
-		pc.MaybeCollect(plt, ust.Maximum == nil || canJSONNumberBeFloat64(*ust.Maximum), "invalid Maximum")
-		pc.MaybeCollect(plt, ust.MultipleOf == nil || canJSONNumberBeFloat64(*ust.MultipleOf) || mustJSONNumberFloat64(*ust.MultipleOf) <= 0, "invalid MultipleOf")
-		pc.MaybeCollect(plt, !ust.Enum.IsSet() || ust.Enum.CanBeFloat64(), "invalid Enum")
+	if ud.Type == "number" {
+		pc.MaybeCollect(plt, ud.Minimum != nil && !canJSONNumberBeFloat64(*ud.Minimum), "invalid Minimum")
+		pc.MaybeCollect(plt, ud.Maximum != nil && !canJSONNumberBeFloat64(*ud.Maximum), "invalid Maximum")
+		pc.MaybeCollect(plt, ud.MultipleOf != nil && (!canJSONNumberBeFloat64(*ud.MultipleOf) || mustJSONNumberFloat64(*ud.MultipleOf) <= 0), "invalid MultipleOf")
+		pc.MaybeCollect(plt, ud.Enum.IsSet() && !ud.Enum.CanBeFloat64(), "invalid Enum")
 
 		vf := &ValidationNumber[float64]{
-			Minimum:    maybeJSONNumberPtrFloat64(ust.Minimum),
-			Maximum:    maybeJSONNumberPtrFloat64(ust.Maximum),
-			MultipleOf: maybeJSONNumberPtrFloat64(ust.MultipleOf),
-			Enum:       ust.Enum.MaybeFloat64(),
+			Minimum:    maybeJSONNumberPtrFloat64(ud.Minimum),
+			Maximum:    maybeJSONNumberPtrFloat64(ud.Maximum),
+			MultipleOf: maybeJSONNumberPtrFloat64(ud.MultipleOf),
+			Enum:       ud.Enum.MaybeFloat64(),
 		}
 
 		return &Validation{
@@ -314,6 +360,37 @@ func (ust *UnprocessedDefinition) toValidation(
 			},
 		}
 	}
+
+	if ud.Type == "array" {
+		pc.MaybeCollect(plt, ud.MinItems != nil && *ud.MinItems < 0, "invalid MinItems")
+		pc.MaybeCollect(plt, ud.MaxItems != nil && *ud.MaxItems < 0, "invalid Minimum")
+
+		va := &ValidationArray{
+			MinItems:       ud.MinItems,
+			MaxItems:       ud.MaxItems,
+			InsertionOrder: ud.InsertionOrder,
+			UniqueItems:    ud.UniqueItems,
+			Items:          ud.Items.toValidation(pc, plt, parentULTR),
+		}
+
+		return &Validation{
+			Array: va,
+		}
+	}
+
+	/*
+		Type: <nil>
+		Type: [boolean null]
+		Type: [boolean string]
+		Type: [integer string]
+		Type: [number string]
+		Type: [object string]
+		Type: [string array]
+		Type: [string object]
+		Type: array
+		Type: boolean
+		Type: object
+	*/
 
 	return nil
 }
@@ -372,10 +449,15 @@ type UnprocessedTopLevelResource struct {
 		}
 	}
 */
-func (utlr *UnprocessedTopLevelResource) toTypes(plt *cfz.ProblemLocationTracker, s *Schema) (*Type, []*Type, error) {
+
+func (utlr *UnprocessedTopLevelResource) toTypes(plt *cfz.ProblemLocationTracker) (*Type, []*Type, error) {
 	pc := cfz.NewProblemsCollector()
 	pc.MaybeCollect(plt, utlr.TypeName == "", "missing TypeName")
 	pc.MaybeCollect(plt, utlr.Description == "", "missing Description")
+
+	if utlr.Definitions == nil {
+		utlr.Definitions = map[string]*UnprocessedDefinition{}
+	}
 
 	tlr := &Type{
 		IsTopLevelResourceType: true,
@@ -384,11 +466,31 @@ func (utlr *UnprocessedTopLevelResource) toTypes(plt *cfz.ProblemLocationTracker
 		Properties:             make(map[string]*Property),
 	}
 
-	sts := make([]*Type, 0, len(utlr.Definitions))
+	for name, ud := range utlr.Properties {
+		tlr.Properties[name] = ud.toProperty(pc, plt.WithPathElements(fmt.Sprintf("property[%v]", name)), utlr, name)
+	}
 
-	for name, ust := range utlr.Definitions {
-		if t := ust.toType(pc, plt, utlr, name); t != nil {
-			sts = append(sts, t)
+	sts := make([]*Type, 0)
+	processedDefinitions := make(map[string]struct{})
+
+	for {
+		more := false
+
+		for name, ud := range memz.ShallowCopyMap(utlr.Definitions) {
+			if _, ok := processedDefinitions[name]; ok {
+				continue
+			}
+
+			processedDefinitions[name] = struct{}{}
+			more = true
+
+			if t := ud.toType(pc, plt.WithPathElements(fmt.Sprintf("definition[%v]", name)), utlr, name); t != nil {
+				sts = append(sts, t)
+			}
+		}
+
+		if !more {
+			break
 		}
 	}
 
@@ -433,4 +535,17 @@ func maybeJSONNumberPtrInt64(n *json.Number) *int64 {
 		}
 	}
 	return nil
+}
+
+func parseRef(ref string) (string, error) {
+	if !strings.HasPrefix(ref, "#/definitions/") {
+		return "", errorz.Errorf("unexpected $ref prefix: '%v'", ref)
+	}
+
+	ref = strings.TrimPrefix(ref, "#/definitions/")
+	if ref == "" {
+		return "", errorz.Errorf("empty $ref")
+	}
+
+	return ref, nil
 }

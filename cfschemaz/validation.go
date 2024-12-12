@@ -42,5 +42,5 @@ type ValidationArray struct {
 	MaxItems       *int
 	InsertionOrder *bool
 	UniqueItems    *bool
-	Items          *ValidationSingle
+	Items          *Validation
 }
