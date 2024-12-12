@@ -88,6 +88,10 @@ func NewGenerator(o *GeneratorOptions, spec *cfspecz.Spec, schema *cfschemaz.Sch
 			return newType(g, schema, specT)
 		})
 
+	if err := g.pc.ToError(); err != nil {
+		fmt.Println(errorz.SDump(err))
+	}
+
 	return g
 }
 
