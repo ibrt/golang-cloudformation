@@ -37,7 +37,7 @@ type Definition struct {
 	RelationshipRef      *DefinitionRelationshipRef `json:"relationshipRef,omitempty"`
 	Required             []string                   `json:"required,omitempty"`
 	Title                string                     `json:"title,omitempty"`
-	Type                 any                        `json:"type,omitempty"` // This can be string or []string.
+	Type                 any                        `json:"type,omitempty"` // It can be string or []string.
 	UniqueItems          *bool                      `json:"uniqueItems,omitempty"`
 }
 
