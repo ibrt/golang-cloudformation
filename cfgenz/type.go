@@ -20,14 +20,14 @@ type Type struct {
 
 	g       *Generator
 	specT   *cfspecz.Type
-	schemaT *cfschemaz.Type
+	schemaR *cfschemaz.Resource
 }
 
-func newType(g *Generator, specT *cfspecz.Type, schemaT *cfschemaz.Type) *Type {
+func newType(g *Generator, specT *cfspecz.Type, schemaR *cfschemaz.Resource) *Type {
 	t := &Type{
 		g:       g,
 		specT:   specT,
-		schemaT: schemaT,
+		schemaR: schemaR,
 	}
 
 	t.Attributes = memz.TransformMapValues(specT.Attributes, func(_ string, specA *cfspecz.Attribute) *Attribute {

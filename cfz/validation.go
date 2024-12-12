@@ -1,4 +1,4 @@
-package cfschemaz
+package cfz
 
 // Validation describes a value.
 type Validation struct {
